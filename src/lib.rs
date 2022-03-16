@@ -8,6 +8,7 @@ use std::{
 use table::{Table, TableRow, TypeDefs};
 
 use crate::table::Types;
+pub mod utils;
 pub mod table;
 
 /*

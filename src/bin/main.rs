@@ -1,6 +1,10 @@
 use SafeEn::table::{TableRow, TypeDefs};
 
 fn main() {
+
+    let q = SafeEn::utils::type_to_bytes(1234);
+
+    /*
     let mut db = SafeEn::Database::new();
     db.set_name("test".to_string());
 
@@ -37,5 +41,6 @@ fn main() {
     //    1_u64.into(),
     //]);
     //db.save("test.sfe");
+    */
 
 }
