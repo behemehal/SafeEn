@@ -19,6 +19,30 @@ pub enum TypeDefs {
     Array(Box<TypeDefs>),
 }
 
+impl TypeDefs {
+    /// Builds a type from base and second layer
+    pub fn from_base_and_second_layer(base: u8, second_layer: u8) -> TypeDefs {
+        match base {
+            1 => match second_layer {
+                0 => TypeDefs::String,
+                _ => panic!("Invalid second layer for String"),
+            },
+            2 => match second_layer {
+                0 => TypeDefs::Char,
+                _ => panic!("Invalid second layer for Char"),
+            },
+            3 => TypeDefs::I64,
+            4 => TypeDefs::U64,
+            5 => TypeDefs::Bool,
+            6 => TypeDefs::F32,
+            7 => TypeDefs::F64,
+            8 => TypeDefs::Array(Box::new(TypeDefs::from_base_and_second_layer(second_layer, 0))),
+            _ => panic!("Invalid base type"),
+        }
+    }
+}
+
+
 #[derive(Clone, Debug)]
 pub enum Types {
     /// String type
@@ -170,8 +194,6 @@ pub struct Table {
     pub(crate) name: String,
     pub(crate) headers: Vec<TableRow>,
     pub(crate) columns: Vec<Vec<Types>>,
-    pub(crate) size_of_columns: usize,
-    pub(crate) size_of_rows: usize,
 }
 
 pub struct Entries {
@@ -200,8 +222,6 @@ pub struct TableRow {
     pub(crate) rtype: TypeDefs,
     /// Nullable if true, default is false
     pub(crate) nullable: bool,
-    /// True if auto_increment, default is false
-    pub(crate) auto_increment: bool,
 }
 
 impl TableRow {
@@ -216,7 +236,6 @@ impl TableRow {
             key,
             rtype,
             nullable: false,
-            auto_increment: false,
         }
     }
 
@@ -225,18 +244,12 @@ impl TableRow {
         self.nullable = true;
         self
     }
-
-    /// Set the auto_increment flag to true
-    pub fn set_auto_increment(&mut self) -> &mut Self {
-        self.auto_increment = true;
-        self
-    }
 }
 
 impl Table {
     pub fn get_where<E: Fn(Entry) -> bool + Clone + Sized>(&self, filter: E) -> Entries {
         let mut entries = Vec::new();
-
+ 
         for column in self.columns.iter() {
             for (i, entry) in column.iter().enumerate() {
                 if filter(Entry {
@@ -275,6 +288,5 @@ impl Table {
             panic!("Row length does not match table headers");
         }
         self.columns.push(row);
-        self.size_of_rows += 1;
     }
 }
