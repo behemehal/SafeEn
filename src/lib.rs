@@ -1,15 +1,16 @@
 use core::fmt;
 use std::{
+    error::Error,
     fs::File,
     io::{Read, Write},
-    panic, error::Error,
+    panic,
 };
 
 use table::{Table, TableRow, TypeDefs};
 
 use crate::table::Types;
-pub mod utils;
 pub mod table;
+pub mod utils;
 
 /*
 
@@ -19,15 +20,9 @@ TableNameSize = 128 bytes,TableHeadersSize = 128 bytes,TableDataSize = 128 bytes
 
 */
 
-
 #[derive(Debug, Clone)]
 pub struct LoadError;
 
-// Generation of an error is completely separate from how it is displayed.
-// There's no need to be concerned about cluttering complex logic with the display style.
-//
-// Note that we don't store any extra info about the errors. This means we can't state
-// which string failed to parse without modifying our types to carry that information.
 impl fmt::Display for LoadError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Failed to load db from file")
@@ -96,7 +91,37 @@ impl Database {
             Err(_) => return Err(LoadError),
         };
 
-        let mut db_name_length = [0; 1];
+        let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
+        let table_len: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
+
+        println!("Name: {}, Len: {}", db_name, table_len);
+
+        for _ in 0..table_len {
+            let table_name: String = utils::read_data(&mut file, TypeDefs::String).into();
+            let table_headers_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+
+            println!(
+                "Table Name: {}, Headers Len: {}",
+                table_name, table_headers_len
+            );
+
+            for _ in 0..table_headers_len {
+                let table_header: String = utils::read_data(&mut file, TypeDefs::String).into();
+
+                panic!("{}", table_header);
+
+                let base_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
+                let second_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
+                let nullable: bool = utils::read_data(&mut file, TypeDefs::Bool).into();
+
+                println!(
+                    "Header: {}, Base: {}, Second: {}, Nullable: {}",
+                    table_header, base_header_type, second_header_type, nullable
+                );
+            }
+        }
+
+        /*
         match file.read_exact(&mut db_name_length) {
             Ok(it) => it,
             Err(_) => return Err(LoadError),
@@ -218,14 +243,11 @@ impl Database {
                 };
                 let second_type = second_type[0];
                 let rtype = TypeDefs::from_base_and_second_layer(base_type, second_type);
-            
-                //let raw_type = 
-                
+
+                //let raw_type =
             }
-
-            
-
         }
+        */
         Ok(())
 
         //let db_name = vec![0u8; u64::from(db_name_len) as usize];
@@ -234,7 +256,64 @@ impl Database {
 
     /// Saves database
     pub fn save(&self, path: &str) {
-        let mut file = File::create(path).unwrap();
+        let mut bytes = vec![];
+
+        utils::extend_bytes_from_raw_type(&mut bytes, &utils::type_to_bytes(self.name.clone()));
+        utils::extend_bytes_from_raw_type(
+            &mut bytes,
+            &utils::type_to_bytes(self.tables.len() as u64),
+        );
+
+        for table in self.tables.iter() {
+            utils::extend_bytes_from_raw_type(
+                &mut bytes,
+                &utils::type_to_bytes(table.name.clone()),
+            );
+            utils::extend_bytes_from_raw_type(
+                &mut bytes,
+                &utils::type_to_bytes(table.headers.len() as u64),
+            );
+
+            for header in table.headers.iter() {
+                utils::extend_bytes_from_raw_type(
+                    &mut bytes,
+                    &utils::type_to_bytes(header.key.clone()),
+                );
+                bytes.extend(header.rtype.get_base_and_second_layer());
+                bytes.push(header.nullable as u8);
+            }
+
+            for row in table.columns.iter() {
+                for _data in row.iter() {
+                    let data = match _data.clone() {
+                        Types::String(e) => utils::type_to_bytes(e),
+                        Types::Char(e) => utils::type_to_bytes(e),
+                        Types::I8(e) => utils::type_to_bytes(e),
+                        Types::I64(e) => utils::type_to_bytes(e),
+                        Types::U64(e) => utils::type_to_bytes(e),
+                        Types::Bool(e) => utils::type_to_bytes(e),
+                        Types::F32(e) => utils::type_to_bytes(e),
+                        Types::F64(e) => utils::type_to_bytes(e),
+                        Types::Array(_) => {
+                            panic!("Array not supported yet");
+                        }
+                    };
+                    utils::extend_bytes_from_raw_type(&mut bytes, &data);
+                }
+            }
+        }
+
+        let mut file = match File::create(path) {
+            Ok(it) => it,
+            Err(_) => return,
+        };
+
+        match file.write_all(&bytes) {
+            Ok(it) => it,
+            Err(_) => return,
+        };
+
+        /*
 
         let mut bytes = vec![];
         bytes.push(size)
@@ -338,5 +417,6 @@ impl Database {
             println!("Bytes: {:?}", bytes);
             file.write_all(&bytes).unwrap();
         }
+        */
     }
 }

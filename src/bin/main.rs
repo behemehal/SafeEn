@@ -1,11 +1,30 @@
 use SafeEn::table::{TableRow, TypeDefs};
 
 fn main() {
+    let mut db = SafeEn::Database::new();
+    db.set_name("test".to_string());
+    let result = db.create_table(
+        "testc",
+        vec![
+            TableRow::new("cd".to_string(), TypeDefs::String),
+            TableRow::new("age".to_string(), TypeDefs::I64),
+            TableRow::new("height".to_string(), TypeDefs::U64),
+        ],
+    );
+    println!("{:#?}", result);
 
-    let q = SafeEn::utils::type_to_bytes(1234);
+    //let mut table = db.table("testc").unwrap();
+
+    //let res = table.insert(vec!["ddd".to_string().into(), 1_i64.into(), 1_u64.into()]);
+
+
+
+    db.save("test.sfe");
+    db.load("test.sfe");
+
+    //let q = SafeEn::utils::type_to_bytes(1234);
 
     /*
-    let mut db = SafeEn::Database::new();
     db.set_name("test".to_string());
 
     let result = db.create_table(
@@ -30,7 +49,6 @@ fn main() {
     db.save("test.sfe");
     //println!("Data Saved");
 
-    //db.load("test.sfe");
     //println!("Data Loaded");
 
     //println!("Tables: {:?}", db.table("testc"));
@@ -42,5 +60,4 @@ fn main() {
     //]);
     //db.save("test.sfe");
     */
-
 }
