@@ -530,6 +530,12 @@ impl TableRow {
 }
 
 impl Table {
+
+    ///Get Headers
+    pub fn get_headers(&self) -> Vec<TableRow> {
+        self.headers.clone()
+    }
+
     pub fn get_where<E: Fn(Entry) -> bool + Clone + Sized>(&self, filter: E) -> Entries {
         let mut entries = Vec::new();
 

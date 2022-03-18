@@ -1,4 +1,5 @@
 use safe_en::table::{TableRow, TypeDefs};
+use prettytable::{Table, Row, Cell, row};
 
 fn main() {
     let mut db = safe_en::Database::new();
@@ -19,7 +20,14 @@ fn main() {
     //db.save("test.sfe");
     db.load("test.sfe");
 
-    println!("Db Loaded: {:?}", db.get_name());
+    
+    
+    let users_table = db.table("users").unwrap();
+    
+    println!("Db Loaded: {:?}", users_table);
+
+ 
+    
 
     println!("Tables: {:?}", db.table("testc"));
 
