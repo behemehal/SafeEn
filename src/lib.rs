@@ -92,7 +92,7 @@ impl Database {
         };
 
         let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
-        let table_len: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
+        let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
 
         println!("Name: {}, Len: {}", db_name, table_len);
 
@@ -107,11 +107,10 @@ impl Database {
 
             for _ in 0..table_headers_len {
                 let table_header: String = utils::read_data(&mut file, TypeDefs::String).into();
-
-                panic!("{}", table_header);
-
+                
                 let base_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
                 let second_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
+                panic!("Header: {}, base: {}, second: {:?}", table_header, base_header_type, second_header_type);
                 let nullable: bool = utils::read_data(&mut file, TypeDefs::Bool).into();
 
                 println!(
