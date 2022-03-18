@@ -12,14 +12,6 @@ use crate::table::Types;
 pub mod table;
 pub mod utils;
 
-/*
-
-TableNameSize = 128 bytes,TableHeadersSize = 128 bytes,TableDataSize = 128 bytes
-
-
-
-*/
-
 #[derive(Debug, Clone)]
 pub struct LoadError;
 
@@ -90,33 +82,53 @@ impl Database {
             Ok(it) => it,
             Err(_) => return Err(LoadError),
         };
-
         let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
         let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
-
-        println!("Name: {}, Len: {}", db_name, table_len);
-
+        self.set_name(db_name);
         for _ in 0..table_len {
             let table_name: String = utils::read_data(&mut file, TypeDefs::String).into();
             let table_headers_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
-
-            println!(
-                "Table Name: {}, Headers Len: {}",
-                table_name, table_headers_len
-            );
-
+            let mut table_rows: Vec<TableRow> = Vec::new();
             for _ in 0..table_headers_len {
                 let table_header: String = utils::read_data(&mut file, TypeDefs::String).into();
-                
+
                 let base_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
                 let second_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
-                panic!("Header: {}, base: {}, second: {:?}", table_header, base_header_type, second_header_type);
                 let nullable: bool = utils::read_data(&mut file, TypeDefs::Bool).into();
-
-                println!(
-                    "Header: {}, Base: {}, Second: {}, Nullable: {}",
-                    table_header, base_header_type, second_header_type, nullable
+                let mut row = TableRow::new(
+                    table_header,
+                    TypeDefs::from_base_and_second_layer(
+                        base_header_type as u8,
+                        second_header_type as u8,
+                    ),
                 );
+                if nullable {
+                    row.set_nullable();
+                }
+                table_rows.push(row);
+            }
+
+            //Create table from collected rows
+            match self.create_table(&table_name, table_rows.clone()) {
+                Ok(it) => it,
+                Err(_) => return Err(LoadError),
+            };
+
+            let table_rows_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+
+            let mut tables = vec![];
+            for _ in 0..table_rows_len {
+                for table_row in &table_rows {
+                    let row_value = utils::read_data(&mut file, table_row.rtype.clone());
+                    tables.push(row_value);
+                }
+            }
+            match self.table(&table_name) {
+                Some(it) => match it.insert(tables) {
+                    Ok(_) => (),
+                    Err(_) => return Err(LoadError),
+                },
+                None => return Err(LoadError),
             }
         }
 
@@ -281,6 +293,11 @@ impl Database {
                 bytes.extend(header.rtype.get_base_and_second_layer());
                 bytes.push(header.nullable as u8);
             }
+
+            utils::extend_bytes_from_raw_type(
+                &mut bytes,
+                &utils::type_to_bytes(table.columns.len() as u64),
+            );
 
             for row in table.columns.iter() {
                 for _data in row.iter() {

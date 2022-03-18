@@ -1,5 +1,5 @@
 use crate::table::{TypeDefs, Types};
-use std::{fs::File, io::Read, panic};
+use std::{fs::File, io::Read};
 
 #[derive(Debug)]
 pub struct RawType {
@@ -8,107 +8,44 @@ pub struct RawType {
 }
 
 pub fn read_data(data: &mut File, rtype: TypeDefs) -> Types {
-
     match rtype {
         TypeDefs::String => {
             let header_size = read_data(data, TypeDefs::I8);
-            let header_size : i8 = header_size.into();
+            let header_size: i8 = header_size.into();
             let mut header = vec![0; header_size as usize];
             data.read_exact(&mut header).unwrap();
             let mut str_buffer = vec![0; header[0] as usize];
             data.read_exact(&mut str_buffer).unwrap();
             let st = String::from_utf8(str_buffer).unwrap();
             Types::String(st)
-        },
+        }
         TypeDefs::Char => todo!(),
         TypeDefs::I8 => {
             let mut buffer = [0; 1];
             data.read_exact(&mut buffer).unwrap();
             Types::I8(buffer[0] as i8)
-        },
-        TypeDefs::I64 => todo!(),
-        TypeDefs::U64 => {
-            let header_size = read_data(data, TypeDefs::I8);
-            let header_size : i8 = header_size.into();
-
-
-            println!("{:?}", header_size);
-
-            let mut header = vec![0; header_size as usize];
+        }
+        TypeDefs::I64 => {
+            read_data(data, TypeDefs::I8);
+            let mut header = [0; 8];
             data.read_exact(&mut header).unwrap();
-            let mut buffer = [0; 8];
+            Types::I64(i64::from_le_bytes(header))
+        }
+        TypeDefs::U64 => {
+            read_data(data, TypeDefs::I8);
+            let mut header = [0; 8];
+            data.read_exact(&mut header).unwrap();
+            Types::U64(u64::from_le_bytes(header))
+        }
+        TypeDefs::Bool => {
+            let mut buffer = [0; 1];
             data.read_exact(&mut buffer).unwrap();
-            Types::U64(u64::from_le_bytes(buffer))
-        },
-        TypeDefs::Bool => todo!(),
+            Types::Bool(buffer[0] != 0)
+        }
         TypeDefs::F32 => todo!(),
         TypeDefs::F64 => todo!(),
         TypeDefs::Array(_) => todo!(),
     }
-
-
-    /*
-    match rtype {
-        TypeDefs::I8 => {
-            let mut buf = [0u8; 1];
-            data.read_exact(&mut buf);
-            let data_size = buf[0] as i8;
-            Types::I8(data_size)
-        }
-        _ => {
-            let mut data_size_len = [0u8; 1];
-            data.read_exact(&mut data_size_len);
-            let data_size_len = data_size_len[0] as usize;
-            let mut data_size = vec![0u8; data_size_len];
-            data.read_exact(&mut data_size);
-
-            println!("TypeSize: {} raw type: {:?}", data_size_len, data_size);
-            match rtype {
-                TypeDefs::String => {
-                    let data_size =
-                        usize::from_le_bytes(data_size[0..data_size_len].try_into().unwrap());
-                    let mut data_data = vec![0u8; data_size];
-                    data.read_exact(&mut data_data);
-                    let data_data = String::from_utf8(data_data).unwrap();
-                    Types::String(data_data)
-                }
-                TypeDefs::Char => todo!(),
-                TypeDefs::I8 => unreachable!(),
-                TypeDefs::I64 => {
-                    let mut data_data = [0u8; 8];
-                    data.read_exact(&mut data_data);
-                    let data_data =
-                        i64::from_le_bytes(data_size[0..data_size_len].try_into().unwrap());
-                    Types::I64(data_data)
-                }
-                TypeDefs::U64 => {
-                    let data_data =
-                        u64::from_le_bytes(data_size[0..data_size_len].try_into().unwrap());
-                    Types::U64(data_data)
-                }
-                TypeDefs::Bool => {
-                    let mut data_size = [0u8; 1];
-                    data.read_exact(&mut data_size);
-                    let data_size = data_size[0] as u64;
-                    todo!()
-                }
-                TypeDefs::F32 => {
-                    let mut data_size = [0u8; 4];
-                    data.read_exact(&mut data_size);
-                    let data_size = f32::from_le_bytes(data_size);
-                    todo!()
-                }
-                TypeDefs::F64 => {
-                    let mut data_size = [0u8; 8];
-                    data.read_exact(&mut data_size);
-                    let data_size = f64::from_le_bytes(data_size);
-                    todo!()
-                }
-                TypeDefs::Array(_) => todo!(),
-            }
-        }
-    }
-    */
 }
 
 pub fn extend_bytes_from_raw_type(bytes: &mut Vec<u8>, raw_type: &RawType) {
