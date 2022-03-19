@@ -1,4 +1,4 @@
-use std::{fs::File, path::Path};
+use std::path::Path;
 
 use prettytable::{Cell, Row, Table};
 use safe_en::Database;

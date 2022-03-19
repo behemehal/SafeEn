@@ -58,6 +58,7 @@ where
     T: Into<Types>,
 {
     let rtype: Types = type_.into();
+    #[allow(unused_attributes)]
     let mut type_size = 0;
     let mut type_data = Vec::new();
     match rtype {

@@ -1,10 +1,5 @@
 use core::fmt;
-use std::{
-    error::Error,
-    fs::File,
-    io::{Read, Write},
-    panic,
-};
+use std::{fs::File, io::Write, panic};
 
 use table::{Table, TableRow, TypeDefs};
 
