@@ -20,32 +20,41 @@ fn main() {
     )
     .unwrap();
 
-    let url = "https://api.instantwebtools.net/v1/passenger?size=1000";
-    let mut request =
-        menemen::request::Request::new(url, menemen::request::RequestTypes::GET).unwrap();
-    request.set_timeout(15000);
-    let mut response = request.send().unwrap();
+    let mut file = std::fs::File::open("./examples/big_data.json").unwrap();
 
     //Read stream to end
     let mut buffer = String::new();
-    response.stream.read_to_string(&mut buffer).unwrap();
+    file.read_to_string(&mut buffer).unwrap();
 
-    println!("Response arrived: {:?}", response.response_info);
     //parse json
     let json: serde_json::Value = serde_json::from_str(&buffer).unwrap();
-    for user in json["data"].as_array().unwrap() {
+    for user in json.as_array().unwrap() {
+        let id = match user["_id"].as_str() {
+            Some(it) => it.to_string(),
+            None => {
+                continue;
+            }
+        };
+        let email = match user["email"].as_str() {
+            Some(it) => it.to_string(),
+            None => {
+                continue;
+            }
+        };
+        let trips = match user["trips"].as_i64()  {
+            Some(it) => it,
+            None => {
+                continue;
+            }
+        };;
+
         db.table("users")
             .unwrap()
-            .insert(vec![
-                user["_id"].as_str().unwrap().to_string().into(),
-                user["name"].as_str().unwrap().to_string().into(),
-                user["trips"].as_i64().unwrap_or(0).into(),
-            ])
+            .insert(vec![id.into(), email.into(), trips.into()])
             .unwrap();
     }
 
     println!("Db saved");
 
-
-    db.save("db.sfe")
+    db.save("./examples/db.sfe")
 }

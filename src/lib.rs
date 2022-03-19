@@ -111,20 +111,23 @@ impl Database {
 
             let table_rows_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
 
-            let mut tables = vec![];
             for _ in 0..table_rows_len {
+                let mut tables = vec![];
                 for table_row in &table_rows {
                     let row_value = utils::read_data(&mut file, table_row.rtype.clone());
                     tables.push(row_value);
                 }
+                match self.table(&table_name) {
+                    Some(it) => match it.insert(tables.clone()) {
+                        Ok(_) => (),
+                        Err(_) => {
+                            return Err(LoadError)
+                        },
+                    },
+                    None => return Err(LoadError),
+                }
             }
-            match self.table(&table_name) {
-                Some(it) => match it.insert(tables) {
-                    Ok(_) => (),
-                    Err(_) => return Err(LoadError),
-                },
-                None => return Err(LoadError),
-            }
+            
         }
 
         /*

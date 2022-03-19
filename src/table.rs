@@ -530,10 +530,24 @@ impl TableRow {
 }
 
 impl Table {
-
     ///Get Headers
     pub fn get_headers(&self) -> Vec<TableRow> {
         self.headers.clone()
+    }
+
+    pub fn get_all(&self) -> Vec<Entries> {
+        let mut all = Vec::new();
+        for i in 0..self.columns.len() {
+            let mut entries = Vec::new();
+            for j in 0..self.columns[i].len() {
+                entries.push(Entry {
+                    key: self.headers[j].key.clone(),
+                    value: self.columns[i][j].clone(),
+                });
+            }
+            all.push(Entries { entries });
+        }
+        all
     }
 
     pub fn get_where<E: Fn(Entry) -> bool + Clone + Sized>(&self, filter: E) -> Entries {
@@ -583,7 +597,12 @@ impl Table {
     pub fn insert(&mut self, rows: Vec<Types>) -> Result<(), Vec<String>> {
         let mut errors = vec![];
         if rows.len() != self.headers.len() {
-            panic!("Row length does not match table headers");
+            errors.push(format!(
+                "Length mismatch, expected {}, got {} length of column",
+                rows.len(),
+                self.headers.len()
+            ));
+            return Err(errors);
         }
         let mut _rows = vec![];
 
