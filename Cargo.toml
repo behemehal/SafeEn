@@ -1,9 +1,15 @@
 [package]
 name = "safe_en"
-version = "0.1.0"
+version = "0.1.1"
+authors = ["Behemehal", "Ahmetcan Aksu"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Local database solution with clean and strict data integrity."
+categories = ["database"]
+keywords = ["database", "local-database"]
+license = "GPL-2.0"
+readme = "README.md"
+documentation = "https://docs.rs/safe_en"
+repository = "https://github.com/behemehal/SafeEn"
 
 [[example]]
 name= "save_big_data"
@@ -14,10 +20,7 @@ name= "load_big_data"
 path = "examples/load_big_data.rs"
 
 [dependencies]
-chrono = "0.4.19"
-reqwest = "0.10.0"
 
 [dev-dependencies]
-menemen = "1.0.0"
 serde_json = "1.0"
 prettytable-rs = "0.8.0"

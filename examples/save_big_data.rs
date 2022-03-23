@@ -46,7 +46,7 @@ fn main() {
             None => {
                 continue;
             }
-        };;
+        };
 
         db.table("users")
             .unwrap()
