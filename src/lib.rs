@@ -11,7 +11,7 @@
 //!     table::{TableRow, TypeDefs},
 //!     Database,
 //! };
-//!
+//! let mut db = Database::new();
 //! db.create_table(
 //!     "users",
 //!     vec![
@@ -78,7 +78,7 @@ impl Database {
     /// ## Example
     /// ```
     /// use safe_en::Database;
-    /// let db = Database::load("db.sfn").unwrap();
+    /// let db = Database::load("db.sfn");
     /// ```
     pub fn load(path: &str) -> Result<Self, LoadError> {
         let mut db = Database::new();

@@ -77,7 +77,7 @@ impl TypeDefs {
 }
 
 /// Database types
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Types {
     /// String type
     String(String),
@@ -132,6 +132,70 @@ impl Types {
             Types::F32(_) => TypeDefs::F32,
             Types::F64(_) => TypeDefs::F64,
             Types::Array(e) => TypeDefs::Array(Box::new(e[0].get_defination())),
+        }
+    }
+
+    /// Convert to string
+    pub fn to_string(&self) -> String {
+        match self {
+            Types::String(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to char
+    pub fn to_char(&self) -> char {
+        match self {
+            Types::Char(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to i8
+    pub fn to_i8(&self) -> i8 {
+        match self {
+            Types::I8(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to i64
+    pub fn to_i64(&self) -> i64 {
+        match self {
+            Types::I64(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to u64
+    pub fn to_u64(&self) -> u64 {
+        match self {
+            Types::U64(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to bool
+    pub fn to_bool(&self) -> bool {
+        match self {
+            Types::Bool(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to f32
+    pub fn to_f32(&self) -> f32 {
+        match self {
+            Types::F32(e) => e.clone(),
+            _ => panic!("Invalid type"),
+        }
+    }
+
+    /// Convert to f64
+    pub fn to_f64(&self) -> f64 {
+        match self {
+            Types::F64(e) => e.clone(),
+            _ => panic!("Invalid type"),
         }
     }
 }
@@ -584,17 +648,21 @@ impl Display for Table {
 /// /// | name | age |
 /// /// | --- | --- |
 /// /// | John | 12 |
+/// use safe_en::table::{Types, Entry, Entries};
 /// Entries {
 ///    entries: vec![
-///       Entry {
-///         key: "name".to_string(),
-///         value: Types::String("John".to_string()),
-///      },
-///     Entry {
-///        key: "age".to_string(),
-///        value: Types::I32(12),
-///    },
+///        Entry {
+///          key: "name".to_string(),
+///          value: Types::String("John".to_string()),
+///        },
+///        Entry {
+///          key: "age".to_string(),
+///          value: Types::I64(12),
+///        },
+///     ],
+/// };
 /// ```
+#[derive(Clone)]
 pub struct Entries {
     /// Rows of the table with key and value
     pub entries: Vec<Entry>,
@@ -646,6 +714,39 @@ impl Index<usize> for Entries {
     }
 }
 
+/// Row query is a query tool for filtering rows
+pub struct RowQuery {
+    entry: Option<Entry>,
+}
+impl RowQuery {
+    /// Check row query exists
+    pub fn exists(&self) -> bool {
+        self.entry.is_some()
+    }
+
+    /// Check if entry is the equvalent of the given value
+    pub fn is<T>(&self, key: T) -> bool
+    where
+        T: std::convert::From<Types> + std::cmp::PartialEq,
+    {
+        if let Some(entry) = &self.entry {
+            let key: T = key.into();
+            key == Into::into(entry.value.clone())
+        } else {
+            false
+        }
+    }
+
+    /// Check if entry is the equvalent of the given type
+    pub fn is_it(&self, key: TypeDefs) -> bool {
+        if let Some(entry) = &self.entry {
+            key == entry.value.get_defination()
+        } else {
+            false
+        }
+    }
+}
+
 impl Entries {
     /// Get the value of a column by key
     pub fn get(&self, key: &str) -> Option<&Entry> {
@@ -655,6 +756,16 @@ impl Entries {
     /// Get the value of a column by index
     pub fn get_at(&self, index: usize) -> Option<&Entry> {
         self.entries.get(index).map(|x| x)
+    }
+
+    /// Get the row, This function extends to `RowQuery`
+    pub fn row(&self, key: &str) -> RowQuery {
+        RowQuery {
+            entry: match self.entries.iter().find(|x| x.key == key).map(|x| x) {
+                Some(x) => Some(x.clone()),
+                None => None,
+            },
+        }
     }
 }
 
@@ -726,28 +837,35 @@ impl Table {
     /// * `filter` - Filter function [`Fn(`Entry`) -> bool`]
     /// * `value` - Value to set
     /// ## Example
-    /// ```rust
-    /// use safe_en::Database;
-    /// let mut db = Database::new();
-    /// db.table("users").get_where(|entry| entry.key == "name" && entry.get() == "Ahmet");
     /// ```
-    pub fn get_where<E: Fn(Entry) -> bool + Clone + Sized>(&self, filter: E) -> Entries {
-        let mut entries = Vec::new();
+    /// use safe_en::Database;
+    /// use safe_en::table::{TableRow, TypeDefs};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///   TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().get_where(|entry| entry.row("name").is("Ahmet".to_string()));
+    /// ```
+    pub fn get_where<E: Fn(Entries) -> bool + Clone + Sized>(&self, filter: E) -> Vec<Entries> {
+        let mut found_entries = Vec::new();
+        for entries in self.columns.iter() {
+            let fake_entries = Entries {
+                entries: entries
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, value)| Entry {
+                        key: self.headers[ix].key.clone(),
+                        value: value.clone(),
+                    })
+                    .collect(),
+            };
 
-        for column in self.columns.iter() {
-            for (i, entry) in column.iter().enumerate() {
-                if filter(Entry {
-                    key: self.headers[i].key.clone(),
-                    value: entry.clone(),
-                }) {
-                    entries.push(Entry {
-                        key: self.headers[i].key.clone(),
-                        value: entry.clone(),
-                    });
-                }
+            if filter(fake_entries.clone()) {
+                found_entries.push(fake_entries);
             }
         }
-        Entries { entries }
+        found_entries
     }
 
     /// Set the value of a column by filter
@@ -757,31 +875,83 @@ impl Table {
     /// ## Example
     /// ```rust
     /// use safe_en::Database;
+    /// use safe_en::table::{TableRow, TypeDefs};
     /// let mut db = Database::new();
-    /// db.table("users").set_where(|entry| entry.key == "name" && entry.get() == "Ahmet", "Mehmet".into());
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().set_where(|x| {
+    ///     x.row("name").is("Ahmet".to_string())
+    /// }, vec![
+    ///     safe_en::table::Entry {
+    ///         key: "name".to_string(),
+    ///         value: "Ahmetcan".into(),
+    ///     },
+    /// ]);
     /// ```
-    pub fn set_where<E: Fn(Entry) -> bool + Clone + Sized, T>(&mut self, filter: E, value: T)
+    /// ## Returns
+    pub fn set_where<E: Fn(Entries) -> bool + Clone + Sized, T>(
+        &mut self,
+        filter: E,
+        value: Vec<Entry>,
+    ) -> Result<usize, Vec<String>>
     where
         Types: From<T>,
         T: Clone,
     {
-        for column in self.columns.iter_mut() {
-            for i in 0..column.len() {
-                if filter(Entry {
-                    key: self.headers[i].key.clone(),
-                    value: column[i].clone(),
-                }) {
-                    if self.headers[i].rtype == Types::from(value.clone()).get_defination() {
-                        column[i] = Types::from(value.clone());
+        let mut changed_rows = 0;
+        let mut errors = vec![];
+        if value.len() != self.headers.len() {
+            errors.push("Value length is not equal to header length".to_string());
+            return Err(errors);
+        }
+        'entryloop: for entries in &mut self.columns {
+            let fake_entries = Entries {
+                entries: entries
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, value)| Entry {
+                        key: self.headers[ix].key.clone(),
+                        value: value.clone(),
+                    })
+                    .collect(),
+            };
+
+            if filter(fake_entries.clone()) {
+                for value_entry in value.iter() {
+                    let targt = fake_entries
+                        .entries
+                        .iter()
+                        .find(|x| x.key == value_entry.key);
+                    if let Some(target) = targt {
+                        if target.value.get_defination() == value_entry.value.get_defination() {
+                            let header_pos = self
+                                .headers
+                                .iter()
+                                .position(|x| x.key == value_entry.key)
+                                .unwrap();
+                            changed_rows += 1;
+                            entries[header_pos] = value_entry.value.clone();
+                        } else {
+                            errors.push(format!(
+                                "Value type is not equal to header type. Header: {}, Value: {}",
+                                target.value.get_defination(),
+                                value_entry.value.get_defination()
+                            ));
+                            break 'entryloop;
+                        }
                     } else {
-                        panic!(
-                            "Type mismatch, expected {}, got {}",
-                            self.headers[i].rtype,
-                            Types::from(value.clone()).get_defination()
-                        );
+                        errors.push(format!("Could not find key '{}' in table", value_entry.key));
+                        break 'entryloop;
                     }
                 }
             }
+        }
+        if errors.len() > 0 {
+            Err(errors)
+        } else {
+            Ok(changed_rows)
         }
     }
 
@@ -791,6 +961,7 @@ impl Table {
     /// ## Example
     /// ```
     /// use safe_en::{table::{TableRow, TypeDefs, Types},Database};
+    /// let mut db = Database::new();
     /// db.create_table(
     ///    "test",
     ///   vec![
