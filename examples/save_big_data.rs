@@ -8,14 +8,14 @@ fn main() {
     //Create db
     let mut db = Database::new();
 
-    db.set_name("users".to_string());
+    db.set_name("users");
 
     db.create_table(
         "users",
         vec![
-            TableRow::new("id".to_string(), TypeDefs::String),
-            TableRow::new("email".to_string(), TypeDefs::String),
-            TableRow::new("trips".to_string(), TypeDefs::I64),
+            TableRow::new("name", TypeDefs::String),
+            TableRow::new("age", TypeDefs::I64),
+            TableRow::new("city", TypeDefs::String),
         ],
     )
     .unwrap();
@@ -28,29 +28,15 @@ fn main() {
 
     //parse json
     let json: serde_json::Value = serde_json::from_str(&buffer).unwrap();
+    println!("{:?}", json.as_array().unwrap());
     for user in json.as_array().unwrap() {
-        let id = match user["_id"].as_str() {
-            Some(it) => it.to_string(),
-            None => {
-                continue;
-            }
-        };
-        let email = match user["email"].as_str() {
-            Some(it) => it.to_string(),
-            None => {
-                continue;
-            }
-        };
-        let trips = match user["trips"].as_i64()  {
-            Some(it) => it,
-            None => {
-                continue;
-            }
-        };
+        let name = user["name"].as_str().unwrap();
+        let age = user["age"].as_i64().unwrap();
+        let city = user["city"].as_str().unwrap();
 
         db.table("users")
             .unwrap()
-            .insert(vec![id.into(), email.into(), trips.into()])
+            .insert(vec![name.into(), age.into(), city.into()])
             .unwrap();
     }
 

@@ -1,12 +1,46 @@
+#![deny(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.0.0")]
+//!# SafeEn
+//!Local database solution with clean and strict data integrity.
+//!
+//!## Usage
+//!
+//! ```
+//! use safe_en::{
+//!     table::{TableRow, TypeDefs},
+//!     Database,
+//! };
+//!
+//! db.create_table(
+//!     "users",
+//!     vec![
+//!         TableRow::new("id", TypeDefs::I64),
+//!         TableRow::new("email", TypeDefs::String),
+//!     ],
+//! )
+//! .unwrap();
+//!
+//!
+//! let id = 1_i64;;
+//! let email = "ahmet@mail.com";
+//!
+//! db.table("users").unwrap().insert(vec![id.into(), email.into()]).unwrap();
+//! ```
+//! You can find more examples [here](https://github.com/behemehal/SafeEn/tree/main/examples)
+
+/// Formatter for tables and types
 use core::fmt;
-use std::{fs::File, io::Write, panic};
-
-use table::{Table, TableRow, TypeDefs};
-
-use crate::table::Types;
+/// FileSystem utilities for saving and loading database
+use std::{fs::File, io::Write};
+/// Database types
+use table::{Table, TableRow, TypeDefs, Types};
+/// Database table
 pub mod table;
+/// Database utils
 pub mod utils;
 
+/// Integrity error
 #[derive(Debug, Clone)]
 pub struct LoadError;
 
@@ -16,13 +50,18 @@ impl fmt::Display for LoadError {
     }
 }
 
+/// Database struct
 pub struct Database {
+    /// Database name
     name: String,
+    /// Database size
     size: usize,
+    /// Database tables
     tables: Vec<table::Table>,
 }
 
 impl Database {
+    /// Creates a new database
     pub fn new() -> Self {
         Database {
             tables: Vec::new(),
@@ -31,9 +70,27 @@ impl Database {
         }
     }
 
+    /// Loads a database from a file
+    /// ## Errors
+    /// Returns a `LoadError` if integrity checks fail
+    /// ## Parameters
+    /// * `path` - The path to the file
+    /// ## Example
+    /// ```
+    /// use safe_en::Database;
+    /// let db = Database::load("db.sfn").unwrap();
+    /// ```
+    pub fn load(path: &str) -> Result<Self, LoadError> {
+        let mut db = Database::new();
+        match db.load_file(path) {
+            Ok(_) => Ok(db),
+            Err(_) => Err(LoadError),
+        }
+    }
+
     ///Sets name of the database
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
+    pub fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
     }
 
     ///Returns name of the database
@@ -72,34 +129,31 @@ impl Database {
     }
 
     /// Load database
-    pub fn load(&mut self, path: &str) -> Result<(), LoadError> {
+    fn load_file(&mut self, path: &str) -> Result<(), LoadError> {
         let mut file = match File::open(path) {
             Ok(it) => it,
             Err(_) => return Err(LoadError),
         };
         let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
         let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
-        self.set_name(db_name);
+        self.set_name(&db_name);
         for _ in 0..table_len {
             let table_name: String = utils::read_data(&mut file, TypeDefs::String).into();
             let table_headers_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+
             let mut table_rows: Vec<TableRow> = Vec::new();
+
             for _ in 0..table_headers_len {
                 let table_header: String = utils::read_data(&mut file, TypeDefs::String).into();
-
-                let base_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
-                let second_header_type: i8 = utils::read_data(&mut file, TypeDefs::I8).into();
-                let nullable: bool = utils::read_data(&mut file, TypeDefs::Bool).into();
-                let mut row = TableRow::new(
-                    table_header,
+                let base_header_type: i8 = utils::read_one(&mut file);
+                let second_header_type: i8 = utils::read_one(&mut file);
+                let row = TableRow::new(
+                    &table_header,
                     TypeDefs::from_base_and_second_layer(
                         base_header_type as u8,
                         second_header_type as u8,
                     ),
                 );
-                if nullable {
-                    row.set_nullable();
-                }
                 table_rows.push(row);
             }
 
@@ -120,147 +174,13 @@ impl Database {
                 match self.table(&table_name) {
                     Some(it) => match it.insert(tables.clone()) {
                         Ok(_) => (),
-                        Err(_) => {
-                            return Err(LoadError)
-                        },
+                        Err(_) => return Err(LoadError),
                     },
                     None => return Err(LoadError),
                 }
             }
-            
         }
-
-        /*
-        match file.read_exact(&mut db_name_length) {
-            Ok(it) => it,
-            Err(_) => return Err(LoadError),
-        };
-        let db_name_length = db_name_length[0];
-
-        let mut db_name = vec![0; db_name_length as usize];
-        match file.read_exact(&mut db_name) {
-            Ok(it) => it,
-            Err(_) => return Err(LoadError),
-        };
-        let db_name = match String::from_utf8(db_name) {
-            Ok(it) => it,
-            Err(_) => return Err(LoadError),
-        };
-
-        self.name = db_name.clone();
-
-        let mut tables_length = [0; 1];
-        match file.read_exact(&mut tables_length) {
-            Ok(it) => it,
-            Err(_) => return Err(LoadError),
-        };
-        let tables_length = tables_length[0];
-
-        for _ in 0..tables_length {
-            let mut table_name_length = [0; 1];
-            match file.read_exact(&mut table_name_length) {
-                Ok(it) => it,
-                Err(_) => return Err(LoadError),
-            };
-            let table_name_length = table_name_length[0];
-
-            let mut table_name = vec![0; table_name_length as usize];
-            match file.read_exact(&mut table_name) {
-                Ok(it) => it,
-                Err(_) => return Err(LoadError),
-            };
-            let table_name = match String::from_utf8(table_name) {
-                Ok(it) => it,
-                Err(_) => return Err(LoadError),
-            };
-            let mut headers_length = [0; 1];
-            match file.read_exact(&mut headers_length) {
-                Ok(it) => it,
-                Err(_) => return Err(LoadError),
-            };
-            let headers_length = headers_length[0];
-
-            let mut table_rows = vec![];
-
-            for _ in 0..headers_length {
-                let mut header_name_length = [0; 1];
-                match file.read_exact(&mut header_name_length) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let header_name_length = header_name_length[0];
-
-                let mut header_name = vec![0; header_name_length as usize];
-                match file.read_exact(&mut header_name) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let header_name = match String::from_utf8(header_name) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-
-                let mut base_header_type = [0; 1];
-                match file.read_exact(&mut base_header_type) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let base_header = base_header_type[0];
-
-                let mut second_header_type = [0; 1];
-                match file.read_exact(&mut second_header_type) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let second_header = second_header_type[0];
-
-                let mut nullable = [0; 1];
-                match file.read_exact(&mut nullable) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let nullable = nullable[0];
-
-                let mut table_row = TableRow::new(
-                    header_name,
-                    TypeDefs::from_base_and_second_layer(base_header, second_header),
-                );
-
-                if nullable == 1 {
-                    table_row.set_nullable();
-                }
-
-                table_rows.push(table_row);
-            }
-
-            match self.create_table(&table_name, table_rows) {
-                Ok(it) => it,
-                Err(_) => return Err(LoadError),
-            }
-
-            for _ in 0..headers_length {
-                let mut base_type = [0; 1];
-                match file.read_exact(&mut base_type) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let base_type = base_type[0];
-                let mut second_type = [0; 1];
-                match file.read_exact(&mut second_type) {
-                    Ok(it) => it,
-                    Err(_) => return Err(LoadError),
-                };
-                let second_type = second_type[0];
-                let rtype = TypeDefs::from_base_and_second_layer(base_type, second_type);
-
-                //let raw_type =
-            }
-        }
-        */
         Ok(())
-
-        //let db_name = vec![0u8; u64::from(db_name_len) as usize];
-        //file.read_exact(buf)
     }
 
     /// Saves database
@@ -289,7 +209,6 @@ impl Database {
                     &utils::type_to_bytes(header.key.clone()),
                 );
                 bytes.extend(header.rtype.get_base_and_second_layer());
-                bytes.push(header.nullable as u8);
             }
 
             utils::extend_bytes_from_raw_type(
@@ -308,9 +227,7 @@ impl Database {
                         Types::Bool(e) => utils::type_to_bytes(e),
                         Types::F32(e) => utils::type_to_bytes(e),
                         Types::F64(e) => utils::type_to_bytes(e),
-                        Types::Array(_) => {
-                            panic!("Array not supported yet");
-                        }
+                        Types::Array(e) => utils::type_to_bytes(e),
                     };
                     utils::extend_bytes_from_raw_type(&mut bytes, &data);
                 }
@@ -326,111 +243,5 @@ impl Database {
             Ok(it) => it,
             Err(_) => return,
         };
-
-        /*
-
-        let mut bytes = vec![];
-        bytes.push(size)
-        bytes.push(self.name.len());
-        bytes.extend_from_slice(self.name.as_bytes());
-        bytes.push(self.tables.len() as u8);
-
-        for table in self.tables.iter() {
-            fn get_id_of_data(data: TypeDefs) -> [u8; 2] {
-                //Three bytes seperated for each data type
-                //First byte is base byte
-                //String is 1
-                //Char is 2
-                //I64 is 3
-                //U64 is 4
-                //Bool is 5
-                //F32 is 6
-                //F64 is 7
-                //Array is 8
-                //Second byte is the child of array if base is array
-
-                let first_byte = match data {
-                    TypeDefs::String => 1,
-                    TypeDefs::Char => 2,
-                    TypeDefs::I64 => 3,
-                    TypeDefs::U64 => 4,
-                    TypeDefs::Bool => 5,
-                    TypeDefs::F32 => 6,
-                    TypeDefs::F64 => 7,
-                    TypeDefs::Array(_) => 8,
-                };
-
-                let second_byte = match data {
-                    TypeDefs::String => 0,
-                    TypeDefs::Char => 0,
-                    TypeDefs::I64 => 0,
-                    TypeDefs::U64 => 0,
-                    TypeDefs::Bool => 0,
-                    TypeDefs::F32 => 0,
-                    TypeDefs::F64 => 0,
-                    TypeDefs::Array(x) => get_id_of_data(*x)[0],
-                };
-                [first_byte, second_byte]
-            }
-
-            bytes.push(table.name.len() as u8);
-            bytes.extend_from_slice(table.name.as_bytes());
-            bytes.push(table.headers.len() as u8);
-            for header in table.headers.iter() {
-                //Key length
-                bytes.push(header.key.len() as u8);
-                //Key bytes
-                bytes.extend_from_slice(header.key.as_bytes());
-                //Data type
-                bytes.extend(get_id_of_data(header.rtype.clone()));
-                //Nullable
-                bytes.push(header.nullable as u8);
-            }
-
-            for row in table.columns.iter() {
-                for data in row.iter() {
-                    match data {
-                        Types::String(x) => {
-                            bytes.push(1);
-                            bytes.push(0);
-                            bytes.extend_from_slice(x.as_bytes());
-                        }
-                        Types::Char(x) => {
-                            bytes.push(2);
-                            bytes.push(0);
-                            bytes.push(x.to_digit(10).unwrap() as u8);
-                        }
-                        Types::I64(x) => {
-                            bytes.extend_from_slice(&x.to_be_bytes());
-                        }
-                        Types::U64(x) => {
-                            bytes.extend_from_slice(&x.to_le_bytes());
-                        }
-                        Types::Bool(x) => {
-                            bytes.push(*x as u8);
-                        }
-                        Types::F32(x) => {
-                            bytes.extend_from_slice(&x.to_le_bytes());
-                        }
-                        Types::F64(x) => {
-                            bytes.extend_from_slice(&x.to_le_bytes());
-                        }
-                        Types::Array(_) => {
-                            panic!("unimplemented");
-                            //bytes.extend_from_slice(&x.len().to_le_bytes());
-                            //for data in x.iter() {
-                            //
-                            //    bytes.extend_from_slice(&get_id_of_data(*data, true));
-                            //}
-                        }
-                    }
-                }
-                println!("Data {:?}", row);
-            }
-
-            println!("Bytes: {:?}", bytes);
-            file.write_all(&bytes).unwrap();
-        }
-        */
     }
 }
