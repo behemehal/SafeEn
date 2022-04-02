@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/safe_en/1.4.2")]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.5.3")]
 //!# SafeEn
 //!Local database solution with clean and strict data integrity.
 //!
