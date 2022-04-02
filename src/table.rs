@@ -606,7 +606,7 @@ impl Display for Entries {
         let mut value_line = String::from("| ");
         for entry in &self.entries {
             let key_len = entry.key.len();
-            let value_len = format!("{:?}", entry.value).len();
+            let value_len = format!("{}", entry.value).len();
             let line_len = if key_len > value_len {
                 key_len + 1
             } else {
@@ -621,7 +621,7 @@ impl Display for Entries {
                 header_line += "| ";
             }
 
-            value_line += &format!("{:?}", entry.value);
+            value_line += &format!("{}", entry.value);
 
             if value_len < line_len {
                 for _ in 0..(line_len - value_len) {

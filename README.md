@@ -1,5 +1,8 @@
 # SafeEn
 
+[![Crates.io Version](https://img.shields.io/crates/v/safe_en?logo=rust)](https://crates.io/crates/safe_en)
+[![Documentation](https://docs.rs/safe_en/badge.svg)](https://docs.rs/safe_en)
+
 Local database solution with clean and strict data integrity.
 
 ```rust
