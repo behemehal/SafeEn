@@ -773,9 +773,9 @@ impl Entries {
 #[derive(Debug, Clone)]
 pub struct TableRow {
     /// Name of row
-    pub(crate) key: String,
+    pub key: String,
     /// Type of row
-    pub(crate) rtype: TypeDefs,
+    pub rtype: TypeDefs,
 }
 
 impl TableRow {
@@ -795,11 +795,45 @@ impl TableRow {
 
 impl Table {
     ///Get Headers
+    /// ## Returns
+    /// * [`Vec<TableRow>`]
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// let headers = db.table("users").unwrap().get_headers();
+    /// assert_eq!(headers.len(), 2);
+    /// assert_eq!(headers[0].key, "name");
+    /// assert_eq!(headers[0].rtype, TypeDefs::String);
+    /// ```
     pub fn get_headers(&self) -> Vec<TableRow> {
         self.headers.clone()
     }
 
     /// Get all columns as a vector of Entries
+    /// ## Returns
+    /// * [`Vec<Entries>`]
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{Entries, Entry, Types, TypeDefs, TableRow}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///   TableRow::new("name", TypeDefs::String),
+    ///  TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///     Types::String("John".to_string()),
+    ///     Types::I64(12)
+    /// ]);
+    /// let entries = db.table("users").unwrap().get_all();
+    /// assert_eq!(entries.len(), 1);
+    /// assert_eq!(entries[0][0].key, "name");
+    /// assert_eq!(entries[0][0].value, Types::String("John".to_string()));
+    /// ```
     pub fn get_all(&self) -> Vec<Entries> {
         let mut all = Vec::new();
         for i in 0..self.columns.len() {
@@ -820,6 +854,22 @@ impl Table {
     /// * `index` - Index of row
     /// ## Returns
     /// [`Option<Entries>`]
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{Entries, Entry, Types, TypeDefs, TableRow}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///  TableRow::new("name", TypeDefs::String),
+    /// TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///    Types::String("John".to_string()),
+    ///   Types::I64(12)
+    /// ]);
+    /// let entries = db.table("users").unwrap().get_at(0).unwrap();
+    /// assert_eq!(entries[0].key, "name");
+    /// assert_eq!(entries[0].value, Types::String("John".to_string()));
+    /// ```
     pub fn get_at(&self, index: usize) -> Option<Entries> {
         let column = self.columns.get(index)?;
         let mut entries = Vec::new();

@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/safe_en/1.5.3")]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.5.4")]
 //!# SafeEn
 //!Local database solution with clean and strict data integrity.
 //!
@@ -98,6 +98,7 @@ impl Database {
         self.name.clone()
     }
 
+    #[deprecated(since = "1.5.3")]
     ///Returns size of the database
     pub fn get_size(&self) -> usize {
         self.size
@@ -114,6 +115,23 @@ impl Database {
     }
 
     /// Creates table
+    /// ## Parameters
+    /// * `name` - Table name
+    /// * `rows` - Table rows
+    /// ## Example
+    /// ```
+    /// use safe_en::{
+    ///    table::{TableRow, TypeDefs},
+    ///   Database,
+    /// };
+    /// let mut db = Database::new();
+    /// db.create_table(
+    ///    "users",
+    ///    vec![
+    ///      TableRow::new("id", TypeDefs::I64),
+    ///      TableRow::new("email", TypeDefs::String),
+    ///    ]).unwrap();
+    /// ```
     pub fn create_table(&mut self, table_name: &str, rows: Vec<TableRow>) -> Result<(), ()> {
         let table = table::Table {
             name: table_name.to_owned(),
@@ -128,7 +146,14 @@ impl Database {
         }
     }
 
-    /// Load database
+    /// Load database from file
+    /// ## Parameters
+    /// * `path` - The path to the file
+    /// ## Example
+    /// ```
+    /// use safe_en::Database;
+    /// let db = Database::load("db.sfn");
+    /// ```
     fn load_file(&mut self, path: &str) -> Result<(), LoadError> {
         let mut file = match File::open(path) {
             Ok(it) => it,
@@ -183,7 +208,15 @@ impl Database {
         Ok(())
     }
 
-    /// Saves database
+    /// Saves database to file
+    /// ## Parameters
+    /// * `path` - The path to the file
+    /// ## Example
+    /// ```
+    /// use safe_en::Database;
+    /// let mut db = Database::new();
+    /// db.save("db.sfn");
+    /// ```
     pub fn save(&self, path: &str) {
         let mut bytes = vec![];
 
