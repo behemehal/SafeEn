@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
+#![deny(rustdoc::missing_doc_code_examples)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/safe_en/1.5.4")]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.5.5")]
 //!# SafeEn
 //!Local database solution with clean and strict data integrity.
 //!
@@ -89,11 +90,26 @@ impl Database {
     }
 
     ///Sets name of the database
+    /// ## Parameters
+    /// * `name` - The name of the database
+    /// ## Example
+    /// ```
+    /// use safe_en::Database;
+    /// let mut db = Database::new();
+    /// db.set_name("users");
+    /// ```
     pub fn set_name(&mut self, name: &str) {
         self.name = name.to_string();
     }
 
     ///Returns name of the database
+    /// ## Example
+    /// ```
+    /// use safe_en::Database;
+    /// let mut db = Database::new();
+    /// db.set_name("users");
+    /// assert_eq!(db.get_name(), "users");
+    /// ```
     pub fn get_name(&self) -> String {
         self.name.clone()
     }
@@ -105,11 +121,33 @@ impl Database {
     }
 
     ///Returns number of tables in the database
-    pub fn get_number_of_tables(&self) -> usize {
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("id", TypeDefs::I64),
+    ///   TableRow::new("email", TypeDefs::String),
+    /// ]).unwrap();
+    /// assert_eq!(db.get_table_count(), 1);
+    /// ```
+    pub fn get_table_count(&self) -> usize {
         self.tables.len()
     }
 
     /// Get query
+    /// ## Parameters
+    /// * `table` - The name of the table
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///   TableRow::new("id", TypeDefs::I64),
+    ///  TableRow::new("email", TypeDefs::String),
+    /// ]).unwrap();
+    /// assert_eq!(db.table("users").unwrap().get_name(), "users");
+    /// ```
     pub fn table(&mut self, table_name: &str) -> Option<&mut Table> {
         self.tables.iter_mut().find(|x| x.name == table_name)
     }

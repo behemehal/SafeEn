@@ -28,7 +28,6 @@ fn main() {
 
     //parse json
     let json: serde_json::Value = serde_json::from_str(&buffer).unwrap();
-    println!("{:?}", json.as_array().unwrap());
     for user in json.as_array().unwrap() {
         let name = user["name"].as_str().unwrap();
         let age = user["age"].as_i64().unwrap();
@@ -42,5 +41,5 @@ fn main() {
 
     println!("Db saved");
 
-    db.save("./examples/db.sfe")
+    db.save("./examples/db.sfn")
 }

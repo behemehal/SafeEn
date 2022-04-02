@@ -749,16 +749,64 @@ impl RowQuery {
 
 impl Entries {
     /// Get the value of a column by key
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///     Types::String("John".to_string()),
+    ///     Types::I64(12)
+    /// ]);
+    /// let entries = db.table("users").unwrap().get_all();
+    /// let first_entry = entries[0].clone();
+    /// assert_eq!(first_entry.get("name").unwrap().key, "name");
+    /// ```
     pub fn get(&self, key: &str) -> Option<&Entry> {
         self.entries.iter().find(|x| x.key == key).map(|x| x)
     }
 
     /// Get the value of a column by index
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///   TableRow::new("name", TypeDefs::String),
+    ///  TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///    Types::String("John".to_string()),
+    ///   Types::I64(12)
+    /// ]);
+    /// let entries = db.table("users").unwrap().get_all();
+    /// let first_entry = entries[0].clone();
+    /// assert_eq!(first_entry.get_at(0).unwrap().key, "name");
+    /// ```
     pub fn get_at(&self, index: usize) -> Option<&Entry> {
         self.entries.get(index).map(|x| x)
     }
 
     /// Get the row, This function extends to `RowQuery`
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///  TableRow::new("name", TypeDefs::String),
+    /// TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///   Types::String("John".to_string()),
+    /// Types::I64(12)
+    /// ]);
+    /// let entries = db.table("users").unwrap().get_all();
+    /// let first_entry = entries[0].clone();
+    /// assert_eq!(first_entry.row("name").is("John".to_string()), true);
+    /// ```
     pub fn row(&self, key: &str) -> RowQuery {
         RowQuery {
             entry: match self.entries.iter().find(|x| x.key == key).map(|x| x) {
@@ -785,6 +833,15 @@ impl TableRow {
     /// * `rtype` - Type of row
     /// ## Returns
     /// * [`TableRow`]
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///  TableRow::new("name", TypeDefs::String),
+    /// TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// ```
     pub fn new(key: &str, rtype: TypeDefs) -> Self {
         TableRow {
             key: key.to_string(),
@@ -794,6 +851,22 @@ impl TableRow {
 }
 
 impl Table {
+
+    /// Get table name
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///     TableRow::new("name", TypeDefs::String),
+    ///     TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// assert_eq!(db.table("users").unwrap().get_name(), "users");
+    /// ```
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
     ///Get Headers
     /// ## Returns
     /// * [`Vec<TableRow>`]
@@ -952,7 +1025,7 @@ impl Table {
     {
         let mut changed_rows = 0;
         let mut errors = vec![];
-        if value.len() != self.headers.len() {
+        if value.len() > self.headers.len() {
             errors.push("Value length is not equal to header length".to_string());
             return Err(errors);
         }

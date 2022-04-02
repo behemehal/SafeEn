@@ -1,6 +1,6 @@
 [package]
 name = "safe_en"
-version = "1.5.4"
+version = "1.5.5"
 authors = ["Behemehal", "Ahmetcan Aksu"]
 edition = "2021"
 description = "Local database solution with clean and strict data integrity."

@@ -4,7 +4,7 @@ use std::path::Path;
 fn main() {
     //Check if test.sfe file exists
     if Path::new("./examples/db.sfe").exists() {
-        let mut db = Database::load("./examples/db.sfe").unwrap();
+        let mut db = Database::load("./examples/db.sfn").unwrap();
         println!("Db named '{}' loaded", db.get_name());
         let table = db.table("users").unwrap();
 
@@ -29,19 +29,11 @@ fn main() {
                         key: "name".to_string(),
                         value: "Ahmetcan".into(),
                     },
-                    safe_en::table::Entry {
-                        key: "age".to_string(),
-                        value: 3_i64.into(),
-                    },
-                    safe_en::table::Entry {
-                        key: "cage".to_string(),
-                        value: 3_i64.into(),
-                    },
                 ],
             )
             .unwrap();
 
-        let list_entries = table.get_where(|x| x.row("ahmet").exists());
+        let list_entries = table.get_where(|x| x.row("name").is("Ahmet".to_string()));
         for entry in list_entries {
             println!("{}", entry);
 
