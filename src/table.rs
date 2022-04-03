@@ -42,7 +42,7 @@ impl Display for TypeDefs {
 
 impl TypeDefs {
     /// Builds a type from base and second layer
-    pub fn from_base_and_second_layer(base: u8, second_layer: u8) -> TypeDefs {
+    pub(crate) fn from_base_and_second_layer(base: u8, second_layer: u8) -> TypeDefs {
         match base {
             0 => TypeDefs::String,
             1 => TypeDefs::Char,
@@ -61,7 +61,7 @@ impl TypeDefs {
     }
 
     /// Returns the id of the type
-    pub fn get_base_and_second_layer(&self) -> [u8; 2] {
+    pub(crate) fn get_base_and_second_layer(&self) -> [u8; 2] {
         match self {
             TypeDefs::String => [0, 0],
             TypeDefs::Char => [1, 0],
@@ -725,6 +725,21 @@ impl RowQuery {
     }
 
     /// Check if entry is the equvalent of the given value
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///     Types::String("John".to_string()),
+    ///     Types::I64(12)
+    /// ]);
+    /// let first_column = &db.table("users").unwrap().get_where(|x| x.row("name").is("John".to_string()))[0];
+    /// assert_eq!(first_column.row("name").is("John".to_string()), true);
+    /// ```
     pub fn is<T>(&self, key: T) -> bool
     where
         T: std::convert::From<Types> + std::cmp::PartialEq,
@@ -738,11 +753,53 @@ impl RowQuery {
     }
 
     /// Check if entry is the equvalent of the given type
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///     Types::String("John".to_string()),
+    ///     Types::I64(12)
+    /// ]);
+    /// let first_column = &db.table("users").unwrap().get_where(|x| x.row("name").is("John".to_string()))[0];
+    /// assert_eq!(first_column.row("name").is_it(TypeDefs::String), true);
+    /// ```
     pub fn is_it(&self, key: TypeDefs) -> bool {
         if let Some(entry) = &self.entry {
             key == entry.value.get_defination()
         } else {
             false
+        }
+    }
+
+    /// Get the value of the entry
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().insert(vec![
+    ///     Types::String("John".to_string()),
+    ///     Types::I64(12)
+    /// ]);
+    /// let first_column = &db.table("users").unwrap().get_where(|x| x.row("name").is("John".to_string()))[0];
+    /// assert_eq!(first_column.row("name").get_value(), Some("John".to_string()));
+    /// ```
+    pub fn get_value<T>(&self) -> Option<T>
+    where
+        T: std::convert::From<Types>,
+    {
+        if let Some(entry) = &self.entry {
+            Some(Into::into(entry.value.clone()))
+        } else {
+            None
         }
     }
 }
@@ -851,7 +908,6 @@ impl TableRow {
 }
 
 impl Table {
-
     /// Get table name
     /// ## Example
     /// ```
@@ -1014,6 +1070,8 @@ impl Table {
     /// ]);
     /// ```
     /// ## Returns
+    /// * [`Ok<Vec<usize>>`] - Changed row indexes
+    /// * [`Err<Vec<String>>`] - Error messages
     pub fn set_where<E: Fn(Entries) -> bool + Clone + Sized, T>(
         &mut self,
         filter: E,

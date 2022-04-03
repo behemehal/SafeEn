@@ -11,7 +11,7 @@ fn main() {
         println!("{}", table);
         println!("");
 
-        /// Get the columns that name field is Ahmet
+        // Get the columns that name field is Ahmet
         let list_entries = table.get_where(|x| x.row("name").is("Ahmet".to_string()));
 
         //Print the list of entries
@@ -20,16 +20,14 @@ fn main() {
             println!("")
         }
 
-        /// Update the name field if the name field is Ahmet
+        // Update the name field if the name field is Ahmet
         table
             .set_where(
                 |x| x.row("name").is("Ahmet".to_string()),
-                vec![
-                    safe_en::table::Entry {
-                        key: "name".to_string(),
-                        value: "Ahmetcan".into(),
-                    },
-                ],
+                vec![safe_en::table::Entry {
+                    key: "name".to_string(),
+                    value: "Ahmetcan".into(),
+                }],
             )
             .unwrap();
 
