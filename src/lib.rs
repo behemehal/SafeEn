@@ -30,10 +30,15 @@
 //! ```
 //! You can find more examples [here](https://github.com/behemehal/SafeEn/tree/main/examples)
 
+#![no_std]
+
+extern crate alloc;
+
 /// Formatter for tables and types
 use core::fmt;
-/// FileSystem utilities for saving and loading database
-use std::{fs::File, io::Write};
+use std::io::BufReader;
+// String
+use alloc::{string::String, vec::Vec};
 /// Database types
 use table::{Table, TableRow, TypeDefs, Types};
 /// Database table
@@ -66,7 +71,7 @@ impl Database {
     pub fn new() -> Self {
         Database {
             tables: Vec::new(),
-            name: "".to_string(),
+            name: String::new(),
             size: 0,
         }
     }
@@ -184,6 +189,58 @@ impl Database {
         }
     }
 
+    #[cfg(feature = "no_std")]
+    fn load_file<T: not_io::Read>(&mut self, file: T) -> Result<(), LoadError> {
+        let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
+        let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+        self.set_name(&db_name);
+        for _ in 0..table_len {
+            let table_name: String = utils::read_data(&mut file, TypeDefs::String).into();
+            let table_headers_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+
+            let mut table_rows: Vec<TableRow> = Vec::new();
+
+            for _ in 0..table_headers_len {
+                let table_header: String = utils::read_data(&mut file, TypeDefs::String).into();
+                let base_header_type: i8 = utils::read_one(&mut file);
+                let second_header_type: i8 = utils::read_one(&mut file);
+                let row = TableRow::new(
+                    &table_header,
+                    TypeDefs::from_base_and_second_layer(
+                        base_header_type as u8,
+                        second_header_type as u8,
+                    ),
+                );
+                table_rows.push(row);
+            }
+
+            //Create table from collected rows
+            match self.create_table(&table_name, table_rows.clone()) {
+                Ok(it) => it,
+                Err(_) => return Err(LoadError),
+            };
+
+            let table_rows_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+
+            for _ in 0..table_rows_len {
+                let mut tables = vec![];
+                for table_row in &table_rows {
+                    let row_value = utils::read_data(&mut file, table_row.rtype.clone());
+                    tables.push(row_value);
+                }
+                match self.table(&table_name) {
+                    Some(it) => match it.insert(tables.clone()) {
+                        Ok(_) => (),
+                        Err(_) => return Err(LoadError),
+                    },
+                    None => return Err(LoadError),
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(not(feature = "no_std"))]
     /// Load database from file
     /// ## Parameters
     /// * `path` - The path to the file
@@ -192,11 +249,7 @@ impl Database {
     /// use safe_en::Database;
     /// let db = Database::load("db.sfn");
     /// ```
-    fn load_file(&mut self, path: &str) -> Result<(), LoadError> {
-        let mut file = match File::open(path) {
-            Ok(it) => it,
-            Err(_) => return Err(LoadError),
-        };
+    fn load_file<T: std::io::Read>(&mut self, file: T) -> Result<(), LoadError> {
         let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
         let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
         self.set_name(&db_name);
