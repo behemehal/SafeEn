@@ -1,4 +1,3 @@
-use core::panic;
 use std::{fmt::Display, ops::Index};
 
 /// Rust types to be used in the table
@@ -22,6 +21,10 @@ pub enum TypeDefs {
     F64,
     /// Array type
     Array(Box<TypeDefs>),
+}
+
+fn types_eq() -> bool {
+    true
 }
 
 impl Display for TypeDefs {
@@ -132,6 +135,153 @@ impl Types {
             Types::F32(_) => TypeDefs::F32,
             Types::F64(_) => TypeDefs::F64,
             Types::Array(e) => TypeDefs::Array(Box::new(e[0].get_defination())),
+        }
+    }
+
+    /// Returns true if type is string
+    /// # Example
+    /// ```
+    /// use table::types::Types;
+    /// let s = Types::String("Hello".to_string());
+    /// assert_eq!(s.is_string(), true);
+    /// ```
+    pub fn is_string(&self) -> bool {
+        match self {
+            Types::String(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is char
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::Char('a');
+    /// assert_eq!(t.is_char(), true);
+    /// ```
+    pub fn is_char(&self) -> bool {
+        match self {
+            Types::Char(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is i8
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::I8(1);
+    /// assert_eq!(t.is_i8(), true);
+    /// ```
+    pub fn is_i8(&self) -> bool {
+        match self {
+            Types::I8(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is i64
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::I64(1);
+    /// assert_eq!(t.is_i64(), true);
+    /// ```
+    pub fn is_i64(&self) -> bool {
+        match self {
+            Types::I64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is u64
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::U64(1);
+    /// assert_eq!(t.is_u64(), true);
+    /// ```
+    pub fn is_u64(&self) -> bool {
+        match self {
+            Types::U64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is bool
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::Bool(true);
+    /// assert_eq!(t.is_bool(), true);
+    /// ```
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Types::Bool(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is f32
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::F32(1.0);
+    /// assert_eq!(t.is_f32(), true);
+    /// ```
+    pub fn is_f32(&self) -> bool {
+        match self {
+            Types::F32(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is f64
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::F64(1.0);
+    /// assert_eq!(t.is_f64(), true);
+    /// ```
+    pub fn is_f64(&self) -> bool {
+        match self {
+            Types::F64(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if type is array
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::Array(vec![Types::I8(1)]);
+    /// assert_eq!(t.is_array(), true);
+    /// ```
+    pub fn is_array(&self) -> bool {
+        match self {
+            Types::Array(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns the type of array
+    /// # Example
+    /// ```
+    /// use safe_en::table::Types;
+    /// let t = Types::Array(vec![Types::I8(1)]);
+    /// assert_eq!(t.get_array_type(), Some(Types::I8(1)));
+    /// ```
+    pub fn get_array_type(&self) -> Option<&Vec<Types>> {
+        match self {
+            Types::Array(e) => Some(e),
+            _ => None,
+        }
+    }
+
+    fn is_empty_array(&self) -> bool {
+        match self {
+            Types::Array(e) => e.is_empty(),
+            _ => false,
         }
     }
 
@@ -551,7 +701,7 @@ impl From<Types> for Vec<f64> {
 /// Row of table
 /// Key is header of the table
 /// Value is the value of the row
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Entry {
     /// Key
     pub key: String,
@@ -742,11 +892,24 @@ impl RowQuery {
     /// ```
     pub fn is<T>(&self, key: T) -> bool
     where
-        T: std::convert::From<Types> + std::cmp::PartialEq,
+        T: Into<Types> + std::cmp::PartialEq,
     {
         if let Some(entry) = &self.entry {
-            let key: T = key.into();
-            key == Into::into(entry.value.clone())
+            match Into::into(key) {
+                Types::String(_) => entry.value.is_string(),
+                Types::Char(_) => entry.value.is_char(),
+                Types::I8(_) => entry.value.is_i8(),
+                Types::I64(_) => entry.value.is_i64(),
+                Types::U64(_) => entry.value.is_u64(),
+                Types::F32(_) => entry.value.is_f32(),
+                Types::F64(_) => entry.value.is_f64(),
+                Types::Bool(_) => entry.value.is_bool(),
+                Types::Array(e) => {
+                    entry.value.is_array()
+                        && matches!(entry.value.get_array_type(), Some(x) if x == &e)
+                }
+            }
+            //key == entry.value.clone().into()
         } else {
             false
         }
@@ -1106,7 +1269,7 @@ impl Table {
                         .iter()
                         .find(|x| x.key == value_entry.key);
                     if let Some(target) = targt {
-                        if target.value.get_defination() == value_entry.value.get_defination() {
+                        if target.value == value_entry.value {
                             let header_pos = self
                                 .headers
                                 .iter()
@@ -1117,8 +1280,7 @@ impl Table {
                         } else {
                             errors.push(format!(
                                 "Value type is not equal to header type. Header: {}, Value: {}",
-                                target.value.get_defination(),
-                                value_entry.value.get_defination()
+                                target.value, value_entry.value
                             ));
                             break 'entryloop;
                         }
@@ -1129,10 +1291,10 @@ impl Table {
                 }
             }
         }
-        if errors.len() > 0 {
-            Err(errors)
-        } else {
+        if errors.is_empty() {
             Ok(changed_rows)
+        } else {
+            Err(errors)
         }
     }
 
@@ -1174,7 +1336,7 @@ impl Table {
         for i in 0..rows.len() {
             let header = &self.headers[i];
 
-            if header.rtype == rows[i].get_defination() {
+            if rows[i].is_empty_array() || header.rtype == rows[i].get_defination() {
                 _rows.push(rows[i].clone());
             } else {
                 errors.push(format!(
