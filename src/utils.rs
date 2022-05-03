@@ -92,44 +92,44 @@ where
 {
     let rtype: Types = type_.into();
     #[allow(unused_attributes)]
-    let mut type_size = 0;
+    let mut _type_size = 0;
     let mut type_data = Vec::new();
     match rtype {
         Types::String(data) => {
-            type_size = std::mem::size_of::<usize>();
+            _type_size = core::mem::size_of::<usize>();
             type_data.extend(data.len().to_le_bytes().to_vec());
             type_data.extend_from_slice(data.as_bytes());
         }
         Types::Char(data) => {
-            type_size = std::mem::size_of::<u32>();
+            _type_size = core::mem::size_of::<u32>();
             type_data = (data as u32).to_le_bytes().to_vec();
         }
         Types::I8(data) => {
-            type_size = std::mem::size_of::<i8>();
+            _type_size = core::mem::size_of::<i8>();
             type_data = data.to_le_bytes().to_vec();
         }
         Types::I64(data) => {
-            type_size = std::mem::size_of::<i64>();
+            _type_size = core::mem::size_of::<i64>();
             type_data = data.to_le_bytes().to_vec();
         }
         Types::U64(data) => {
-            type_size = std::mem::size_of::<u64>();
+            _type_size = core::mem::size_of::<u64>();
             type_data = data.to_le_bytes().to_vec();
         }
         Types::Bool(data) => {
-            type_size = 1;
+            _type_size = 1;
             type_data = vec![if data { 1 } else { 0 }];
         }
         Types::F32(data) => {
-            type_size = std::mem::size_of::<f32>();
+            _type_size = core::mem::size_of::<f32>();
             type_data = data.to_le_bytes().to_vec();
         }
         Types::F64(data) => {
-            type_size = std::mem::size_of::<f64>();
+            _type_size = core::mem::size_of::<f64>();
             type_data = data.to_le_bytes().to_vec();
         }
         Types::Array(data) => {
-            type_size = std::mem::size_of::<usize>();
+            _type_size = core::mem::size_of::<usize>();
             type_data = data.len().to_le_bytes().to_vec();
             for e in data {
                 extend_bytes_from_raw_type(&mut type_data, &type_to_bytes(e));
@@ -137,7 +137,7 @@ where
         }
     }
     RawType {
-        type_size,
+        type_size: _type_size,
         type_data,
     }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "safe_en"
-version = "1.6.5"
-authors = ["Behemehal", "Ahmetcan Aksu"]
+version = "1.6.6"
+authors = ["Behemehal <info@behemehal.net>", "Ahmetcan Aksu <ahmetcanaksu@behemehal.net>"]
 edition = "2021"
 description = "Local database solution with clean and strict data integrity."
 categories = ["database"]

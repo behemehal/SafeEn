@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Index};
+use core::{fmt::Display, ops::Index};
 
 /// Rust types to be used in the table
 #[derive(Clone, Debug, PartialEq)]
@@ -23,12 +23,8 @@ pub enum TypeDefs {
     Array(Box<TypeDefs>),
 }
 
-fn types_eq() -> bool {
-    true
-}
-
 impl Display for TypeDefs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             TypeDefs::String => write!(f, "String"),
             TypeDefs::Char => write!(f, "Char"),
@@ -103,7 +99,7 @@ pub enum Types {
 }
 
 impl Display for Types {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Types::String(e) => format!("\"{}\"", e).fmt(f),
             Types::Char(e) => format!("'{}'", e).fmt(f),
@@ -141,7 +137,7 @@ impl Types {
     /// Returns true if type is string
     /// # Example
     /// ```
-    /// use table::types::Types;
+    /// use safe_en::table::Types;
     /// let s = Types::String("Hello".to_string());
     /// assert_eq!(s.is_string(), true);
     /// ```
@@ -269,7 +265,7 @@ impl Types {
     /// ```
     /// use safe_en::table::Types;
     /// let t = Types::Array(vec![Types::I8(1)]);
-    /// assert_eq!(t.get_array_type(), Some(Types::I8(1)));
+    /// assert_eq!(t.get_array_type(), Some(&vec![Types::I8(1)]));
     /// ```
     pub fn get_array_type(&self) -> Option<&Vec<Types>> {
         match self {
@@ -713,7 +709,7 @@ impl Entry {
     /// Get the value of the entry
     pub fn get<T>(&self) -> T
     where
-        T: std::convert::From<Types>,
+        T: core::convert::From<Types>,
     {
         Into::into(self.value.clone())
     }
@@ -728,7 +724,7 @@ pub struct Table {
 }
 
 impl Display for Table {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut lines = String::new();
         let max_row_lengths = if self.columns.len() == 0 {
             self.headers
@@ -819,7 +815,7 @@ pub struct Entries {
 }
 
 impl Display for Entries {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut header_line = String::from("| ");
         let mut value_line = String::from("| ");
         for entry in &self.entries {
@@ -892,7 +888,7 @@ impl RowQuery {
     /// ```
     pub fn is<T>(&self, key: T) -> bool
     where
-        T: Into<Types> + std::cmp::PartialEq,
+        T: Into<Types> + PartialEq,
     {
         if let Some(entry) = &self.entry {
             match Into::into(key) {
@@ -957,7 +953,7 @@ impl RowQuery {
     /// ```
     pub fn get_value<T>(&self) -> Option<T>
     where
-        T: std::convert::From<Types>,
+        T: From<Types>,
     {
         if let Some(entry) = &self.entry {
             Some(Into::into(entry.value.clone()))

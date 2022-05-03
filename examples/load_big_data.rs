@@ -1,4 +1,4 @@
-use safe_en::{table::Entries, Database};
+use safe_en::{Database};
 use std::path::Path;
 
 fn main() {
