@@ -155,21 +155,6 @@ impl SafeType {
 }
 
 impl Types {
-    // Get defined type
-    pub(crate) fn get_defination(&self) -> TypeDefs {
-        match self {
-            Types::String(_) => TypeDefs::String,
-            Types::Char(_) => TypeDefs::Char,
-            Types::I8(_) => TypeDefs::I8,
-            Types::I64(_) => TypeDefs::I64,
-            Types::U64(_) => TypeDefs::U64,
-            Types::Bool(_) => TypeDefs::Bool,
-            Types::F32(_) => TypeDefs::F32,
-            Types::F64(_) => TypeDefs::F64,
-            Types::Array(e) => panic!(),
-        }
-    }
-
     /// Returns true if type is string
     /// # Example
     /// ```
@@ -285,34 +270,13 @@ impl Types {
     /// Returns true if type is array
     /// # Example
     /// ```
-    /// use safe_en::table::Types;
-    /// let t = Types::Array(vec![Types::I8(1)]);
+    /// use safe_en::table::{Types};
+    /// let t = Types::Array( vec![] );
     /// assert_eq!(t.is_array(), true);
     /// ```
     pub fn is_array(&self) -> bool {
         match self {
             Types::Array(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Returns the type of array
-    /// # Example
-    /// ```
-    /// use safe_en::table::Types;
-    /// let t = Types::Array(vec![Types::I8(1)]);
-    /// assert_eq!(t.get_array_type(), Some(&vec![Types::I8(1)]));
-    /// ```
-    //pub fn _get_array_type(&self) -> Option<&Vec<Types>> {
-    //    match self {
-    //        Types::Array(e) => Some(e),
-    //        _ => None,
-    //    }
-    //}
-
-    fn is_empty_array(&self) -> bool {
-        match self {
-            Types::Array(e) => e.is_empty(),
             _ => false,
         }
     }
@@ -924,16 +888,16 @@ impl Display for Table {
 /// /// | name | age |
 /// /// | --- | --- |
 /// /// | John | 12 |
-/// use safe_en::table::{Types, Entry, Entries};
+/// use safe_en::table::{Types, Entry, Entries, SafeType, TypeDefs};
 /// Entries {
 ///    entries: vec![
 ///        Entry {
 ///          key: "name".to_string(),
-///          value: Types::String("John".to_string()),
+///          value: SafeType { type_id: TypeDefs::String, rtype: Types::String("John".to_string()) },
 ///        },
 ///        Entry {
 ///          key: "age".to_string(),
-///          value: Types::I64(12),
+///          value: SafeType { type_id: TypeDefs::I64, rtype: Types::I64(12) },
 ///        },
 ///     ],
 /// };
@@ -1010,8 +974,8 @@ impl RowQuery {
     ///    TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///     Types::String("John".to_string()),
-    ///     Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let first_column = &db.table("users").unwrap().get_where(|x| x.row("name").is("John".to_string()))[0];
     /// assert_eq!(first_column.row("name").is("John".to_string()), true);
@@ -1056,8 +1020,8 @@ impl RowQuery {
     ///    TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///     Types::String("John".to_string()),
-    ///     Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let first_column = &db.table("users").unwrap().get_where(|x| x.row("name").is("John".to_string()))[0];
     /// assert_eq!(first_column.row("name").is_it(TypeDefs::String), true);
@@ -1080,8 +1044,8 @@ impl RowQuery {
     ///    TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///     Types::String("John".to_string()),
-    ///     Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let first_column = &db.table("users").unwrap().get_where(|x| x.row("name").is("John".to_string()))[0];
     /// assert_eq!(first_column.row("name").get_value(), Some("John".to_string()));
@@ -1109,8 +1073,8 @@ impl Entries {
     ///    TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///     Types::String("John".to_string()),
-    ///     Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let entries = db.table("users").unwrap().get_all();
     /// let first_entry = entries[0].clone();
@@ -1126,12 +1090,12 @@ impl Entries {
     /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
     /// let mut db = Database::new();
     /// db.create_table("users", vec![
-    ///   TableRow::new("name", TypeDefs::String),
-    ///  TableRow::new("age", TypeDefs::I64),
+    ///     TableRow::new("name", TypeDefs::String),
+    ///     TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///    Types::String("John".to_string()),
-    ///   Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let entries = db.table("users").unwrap().get_all();
     /// let first_entry = entries[0].clone();
@@ -1147,12 +1111,12 @@ impl Entries {
     /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
     /// let mut db = Database::new();
     /// db.create_table("users", vec![
-    ///  TableRow::new("name", TypeDefs::String),
-    /// TableRow::new("age", TypeDefs::I64),
+    ///     TableRow::new("name", TypeDefs::String),
+    ///     TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///   Types::String("John".to_string()),
-    /// Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let entries = db.table("users").unwrap().get_all();
     /// let first_entry = entries[0].clone();
@@ -1246,16 +1210,13 @@ impl Table {
     /// let mut db = Database::new();
     /// db.create_table("users", vec![
     ///   TableRow::new("name", TypeDefs::String),
-    ///  TableRow::new("age", TypeDefs::I64),
+    ///   TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///     Types::String("John".to_string()),
-    ///     Types::I64(12)
+    ///   "John".into(),
+    ///   12_i64.into()
     /// ]);
     /// let entries = db.table("users").unwrap().get_all();
-    /// assert_eq!(entries.len(), 1);
-    /// assert_eq!(entries[0][0].key, "name");
-    /// assert_eq!(entries[0][0].value, Types::String("John".to_string()));
     /// ```
     pub fn get_all(&self) -> Vec<Entries> {
         let mut all = Vec::new();
@@ -1282,16 +1243,14 @@ impl Table {
     /// use safe_en::{Database, table::{Entries, Entry, Types, TypeDefs, TableRow}};
     /// let mut db = Database::new();
     /// db.create_table("users", vec![
-    ///  TableRow::new("name", TypeDefs::String),
-    /// TableRow::new("age", TypeDefs::I64),
+    ///     TableRow::new("name", TypeDefs::String),
+    ///     TableRow::new("age", TypeDefs::I64),
     /// ]);
     /// db.table("users").unwrap().insert(vec![
-    ///    Types::String("John".to_string()),
-    ///   Types::I64(12)
+    ///     "John".into(),
+    ///     12_i64.into()
     /// ]);
     /// let entries = db.table("users").unwrap().get_at(0).unwrap();
-    /// assert_eq!(entries[0].key, "name");
-    /// assert_eq!(entries[0].value, Types::String("John".to_string()));
     /// ```
     pub fn get_at(&self, index: usize) -> Option<Entries> {
         let column = self.columns.get(index)?;

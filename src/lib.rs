@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::missing_doc_code_examples)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/safe_en/1.6.8")]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.6.9")]
 //!# SafeEn
 //!Local database solution with clean and strict data integrity.
 //!
@@ -35,7 +35,7 @@ use core::fmt;
 /// FileSystem utilities for saving and loading database
 use std::{fs::File, io::Write};
 /// Database types
-use table::{Table, TableRow, TypeDefs, Types};
+use table::{Table, TableRow, TypeDefs};
 /// Database table
 pub mod table;
 /// Database utils
