@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::missing_doc_code_examples)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/safe_en/1.6.6")]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.6.7")]
 //!# SafeEn
 //!Local database solution with clean and strict data integrity.
 //!
