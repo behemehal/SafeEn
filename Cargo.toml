@@ -19,7 +19,12 @@ path = "examples/save_big_data.rs"
 name= "load_big_data"
 path = "examples/load_big_data.rs"
 
+[features]
+default = []
+no_std = ["not-io"]
+
 [dependencies]
+not-io = { version = "0.1.0-alpha", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0"

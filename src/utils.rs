@@ -5,10 +5,18 @@ use std::{fs::File, io::Read};
 #[derive(Debug)]
 pub(crate) struct RawType {
     pub type_size: usize,
-    pub type_data: Vec<u8>,
+    pub type_data: alloc::vec::Vec<u8>,
 }
 
-pub(crate) fn read_one(data: &mut File) -> i8 {
+#[cfg(not(feature = "no_std"))]
+pub(crate) fn read_one<T: std::io::Read>(data: &mut T) -> i8 {
+    let mut buffer = [0; 1];
+    data.read_exact(&mut buffer).unwrap();
+    buffer[0] as i8
+}
+
+#[cfg(feature = "no_std")]
+pub(crate) fn read_one<T: not_io::Read>(data: &mut T) -> i8 {
     let mut buffer = [0; 1];
     data.read_exact(&mut buffer).unwrap();
     buffer[0] as i8
