@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use crate::table::{TypeDefs, Types};
+use crate::table::{SafeType, TypeDefs, Types};
 use std::{fs::File, io::Read};
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub(crate) fn read_one(data: &mut File) -> i8 {
     buffer[0] as i8
 }
 
-pub(crate) fn read_data(data: &mut File, rtype: TypeDefs) -> Types {
+pub(crate) fn read_data(data: &mut File, rtype: TypeDefs) -> SafeType {
     match rtype {
         TypeDefs::String => {
             let header_size = read_one(data);
@@ -24,49 +24,73 @@ pub(crate) fn read_data(data: &mut File, rtype: TypeDefs) -> Types {
             let mut str_buffer = vec![0; header[0] as usize];
             data.read_exact(&mut str_buffer).unwrap();
             let st = String::from_utf8(str_buffer).unwrap();
-            Types::String(st)
+            SafeType {
+                type_id: rtype,
+                rtype: st.into(),
+            }
         }
         TypeDefs::Char => {
             read_one(data);
             let mut header = [0; 4];
             data.read_exact(&mut header).unwrap();
-            Types::Char(char::from_u32(u32::from_le_bytes(header)).unwrap())
+            SafeType {
+                type_id: rtype,
+                rtype: char::from_u32(u32::from_le_bytes(header)).unwrap().into(),
+            }
         }
         TypeDefs::I8 => {
             let mut buffer = [0; 2];
             data.read_exact(&mut buffer).unwrap();
-            Types::I8(buffer[1] as i8)
+            SafeType {
+                type_id: rtype,
+                rtype: (buffer[1] as i8).into(),
+            }
         }
         TypeDefs::I64 => {
             read_one(data);
             let mut header = [0; 8];
             data.read_exact(&mut header).unwrap();
-            Types::I64(i64::from_le_bytes(header))
+            SafeType {
+                type_id: rtype,
+                rtype: i64::from_le_bytes(header).into(),
+            }
         }
         TypeDefs::U64 => {
             read_one(data);
             let mut header = [0; 8];
             data.read_exact(&mut header).unwrap();
-            Types::U64(u64::from_le_bytes(header))
+            SafeType {
+                type_id: rtype,
+                rtype: u64::from_le_bytes(header).into(),
+            }
         }
         TypeDefs::Bool => {
             let mut buffer = [0; 2];
             data.read_exact(&mut buffer).unwrap();
-            Types::Bool(buffer[1] == 1)
+            SafeType {
+                type_id: rtype,
+                rtype: (buffer[1] == 1).into(),
+            }
         }
         TypeDefs::F32 => {
             read_one(data);
             let mut header = [0; 4];
             data.read_exact(&mut header).unwrap();
-            Types::F32(f32::from_le_bytes(header))
+            SafeType {
+                type_id: rtype,
+                rtype: (f32::from_le_bytes(header)).into(),
+            }
         }
         TypeDefs::F64 => {
             read_one(data);
             let mut header = [0; 8];
             data.read_exact(&mut header).unwrap();
-            Types::F64(f64::from_le_bytes(header))
+            SafeType {
+                type_id: rtype,
+                rtype: (f64::from_le_bytes(header)).into(),
+            }
         }
-        TypeDefs::Array(e) => {
+        TypeDefs::Array(ref e) => {
             read_one(data);
             let mut header = [0; 8];
             data.read_exact(&mut header).unwrap();
@@ -76,7 +100,10 @@ pub(crate) fn read_data(data: &mut File, rtype: TypeDefs) -> Types {
                 let data = read_data(data, *e.clone());
                 array.push(data);
             }
-            Types::Array(array)
+            SafeType {
+                type_id: rtype,
+                rtype: Types::Array(array),
+            }
         }
     }
 }
@@ -132,7 +159,7 @@ where
             _type_size = core::mem::size_of::<usize>();
             type_data = data.len().to_le_bytes().to_vec();
             for e in data {
-                extend_bytes_from_raw_type(&mut type_data, &type_to_bytes(e));
+                extend_bytes_from_raw_type(&mut type_data, &type_to_bytes(e.get_type()));
             }
         }
     }

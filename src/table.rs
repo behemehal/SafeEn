@@ -95,7 +95,7 @@ pub enum Types {
     /// F64 type
     F64(f64),
     /// Array type
-    Array(Vec<Types>),
+    Array(Vec<SafeType>),
 }
 
 impl Display for Types {
@@ -111,10 +111,46 @@ impl Display for Types {
             Types::F64(e) => format!("{}", e).fmt(f),
             Types::Array(e) => format!(
                 "[{}]",
-                e.iter().map(|x| format!("{}", x)).collect::<String>()
+                e.iter()
+                    .map(|x| format!("{}", x.get_type_name()))
+                    .collect::<String>()
             )
             .fmt(f),
         }
+    }
+}
+
+///REP
+#[derive(Clone, Debug, PartialEq)]
+pub struct SafeType {
+    ///REP
+    pub type_id: TypeDefs,
+    ///REP
+    pub rtype: Types,
+}
+
+impl SafeType {
+    ///REP
+    pub fn get<T>(&self) -> T
+    where
+        T: core::convert::From<Types>,
+    {
+        Into::into(self.rtype.clone())
+    }
+
+    ///REP
+    pub fn get_type(&self) -> Types {
+        self.rtype.clone()
+    }
+
+    ///REP
+    pub fn get_type_name(&self) -> TypeDefs {
+        self.type_id.clone()
+    }
+
+    ///REP
+    pub fn build(rtype: Types, type_id: TypeDefs) -> SafeType {
+        SafeType { type_id, rtype }
     }
 }
 
@@ -130,7 +166,7 @@ impl Types {
             Types::Bool(_) => TypeDefs::Bool,
             Types::F32(_) => TypeDefs::F32,
             Types::F64(_) => TypeDefs::F64,
-            Types::Array(e) => TypeDefs::Array(Box::new(e[0].get_defination())),
+            Types::Array(e) => panic!(),
         }
     }
 
@@ -267,12 +303,12 @@ impl Types {
     /// let t = Types::Array(vec![Types::I8(1)]);
     /// assert_eq!(t.get_array_type(), Some(&vec![Types::I8(1)]));
     /// ```
-    pub fn get_array_type(&self) -> Option<&Vec<Types>> {
-        match self {
-            Types::Array(e) => Some(e),
-            _ => None,
-        }
-    }
+    //pub fn _get_array_type(&self) -> Option<&Vec<Types>> {
+    //    match self {
+    //        Types::Array(e) => Some(e),
+    //        _ => None,
+    //    }
+    //}
 
     fn is_empty_array(&self) -> bool {
         match self {
@@ -346,6 +382,60 @@ impl Types {
     }
 }
 
+impl Into<SafeType> for &str {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::String(self.to_string()), TypeDefs::String)
+    }
+}
+
+impl Into<SafeType> for String {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::String(self), TypeDefs::String)
+    }
+}
+
+impl Into<SafeType> for char {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::Char(self), TypeDefs::Char)
+    }
+}
+
+impl Into<SafeType> for i8 {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::I8(self), TypeDefs::I8)
+    }
+}
+
+impl Into<SafeType> for i64 {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::I64(self), TypeDefs::I64)
+    }
+}
+
+impl Into<SafeType> for u64 {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::U64(self), TypeDefs::U64)
+    }
+}
+
+impl Into<SafeType> for bool {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::Bool(self), TypeDefs::Bool)
+    }
+}
+
+impl Into<SafeType> for f32 {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::F32(self), TypeDefs::F32)
+    }
+}
+
+impl Into<SafeType> for f64 {
+    fn into(self) -> SafeType {
+        SafeType::build(Types::F64(self), TypeDefs::F64)
+    }
+}
+
 impl Into<Types> for &str {
     fn into(self) -> Types {
         Types::String(self.to_string())
@@ -404,10 +494,8 @@ impl Into<Types> for Vec<String> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::String(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::String(c), TypeDefs::String))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -416,10 +504,8 @@ impl Into<Types> for Vec<char> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::Char(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::Char(c), TypeDefs::Char))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -428,10 +514,8 @@ impl Into<Types> for Vec<i8> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::I8(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::I8(c), TypeDefs::I8))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -440,10 +524,8 @@ impl Into<Types> for Vec<i64> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::I64(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::I64(c), TypeDefs::I64))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -452,10 +534,8 @@ impl Into<Types> for Vec<u64> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::U64(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::U64(c), TypeDefs::U64))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -464,10 +544,8 @@ impl Into<Types> for Vec<bool> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::Bool(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::Bool(c), TypeDefs::Bool))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -476,10 +554,8 @@ impl Into<Types> for Vec<f32> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::F32(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::F32(c), TypeDefs::F32))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
@@ -488,15 +564,117 @@ impl Into<Types> for Vec<f64> {
     fn into(self) -> Types {
         Types::Array(
             self.into_iter()
-                .map(|c| Types::F64(c))
-                .collect::<Vec<Types>>()
-                .into_iter()
-                .collect::<Vec<Types>>(),
+                .map(|c| SafeType::build(Types::F64(c), TypeDefs::F64))
+                .collect::<Vec<SafeType>>(),
         )
     }
 }
 
-impl Into<Types> for Vec<Types> {
+impl Into<SafeType> for Vec<String> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::String(c), TypeDefs::String))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::String,
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<char> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::Char(c), TypeDefs::Char))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::Char,
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<i8> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::I8(c), TypeDefs::I8))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::I8,
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<i64> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::I64(c), TypeDefs::I64))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::Array(Box::new(TypeDefs::I64)),
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<u64> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::U64(c), TypeDefs::U64))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::Array(Box::new(TypeDefs::U64)),
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<bool> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::Bool(c), TypeDefs::Bool))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::Bool,
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<f32> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::F32(c), TypeDefs::F32))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::Array(Box::new(TypeDefs::F32)),
+        )
+    }
+}
+
+impl Into<SafeType> for Vec<f64> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::F64(c), TypeDefs::F64))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::Array(Box::new(TypeDefs::F64)),
+        )
+    }
+}
+
+impl Into<Types> for Vec<SafeType> {
     fn into(self) -> Types {
         Types::Array(self)
     }
@@ -577,13 +755,7 @@ impl From<Types> for f64 {
 impl From<Types> for Vec<String> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::String(y) => y,
-                    _ => panic!("Not a String type"),
-                })
-                .collect::<Vec<String>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<String>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -592,13 +764,7 @@ impl From<Types> for Vec<String> {
 impl From<Types> for Vec<char> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::Char(y) => y,
-                    _ => panic!("Not a char type"),
-                })
-                .collect::<Vec<char>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<char>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -607,13 +773,7 @@ impl From<Types> for Vec<char> {
 impl From<Types> for Vec<i8> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::I8(y) => y,
-                    _ => panic!("Not a i8 type"),
-                })
-                .collect::<Vec<i8>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<i8>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -622,13 +782,7 @@ impl From<Types> for Vec<i8> {
 impl From<Types> for Vec<i64> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::I64(y) => y,
-                    _ => panic!("Not a i64 type"),
-                })
-                .collect::<Vec<i64>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<i64>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -637,13 +791,7 @@ impl From<Types> for Vec<i64> {
 impl From<Types> for Vec<u64> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::U64(y) => y,
-                    _ => panic!("Not a u64 type"),
-                })
-                .collect::<Vec<u64>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<u64>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -652,13 +800,7 @@ impl From<Types> for Vec<u64> {
 impl From<Types> for Vec<bool> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::Bool(y) => y,
-                    _ => panic!("Not a bool type"),
-                })
-                .collect::<Vec<bool>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<bool>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -667,13 +809,7 @@ impl From<Types> for Vec<bool> {
 impl From<Types> for Vec<f32> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::F32(y) => y,
-                    _ => panic!("Not a f32 type"),
-                })
-                .collect::<Vec<f32>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<f32>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -682,13 +818,7 @@ impl From<Types> for Vec<f32> {
 impl From<Types> for Vec<f64> {
     fn from(c: Types) -> Self {
         match c {
-            Types::Array(x) => x
-                .into_iter()
-                .map(|f| match f {
-                    Types::F64(y) => y,
-                    _ => panic!("Not a f64 type"),
-                })
-                .collect::<Vec<f64>>(),
+            Types::Array(x) => x.into_iter().map(|f| f.get()).collect::<Vec<f64>>(),
             _ => panic!("Not a vec type"),
         }
     }
@@ -702,16 +832,16 @@ pub struct Entry {
     /// Key
     pub key: String,
     /// Value
-    pub value: Types,
+    pub value: SafeType,
 }
 
 impl Entry {
     /// Get the value of the entry
     pub fn get<T>(&self) -> T
     where
-        T: core::convert::From<Types>,
+        T: core::convert::From<SafeType> + std::convert::From<Types>,
     {
-        Into::into(self.value.clone())
+        self.value.get()
     }
 }
 
@@ -720,7 +850,7 @@ impl Entry {
 pub struct Table {
     pub(crate) name: String,
     pub(crate) headers: Vec<TableRow>,
-    pub(crate) columns: Vec<Vec<Types>>,
+    pub(crate) columns: Vec<Vec<SafeType>>,
 }
 
 impl Display for Table {
@@ -772,7 +902,7 @@ impl Display for Table {
 
             for (index, _) in self.headers.iter().enumerate() {
                 let mut row_len = String::new();
-                let rtype = format!(" {}", column[index]);
+                let rtype = format!(" {}", column[index].get_type());
                 for i in 0..max_row_lengths[index] {
                     if i < rtype.len() {
                         row_len += &rtype.chars().nth(i).unwrap_or(' ').to_string();
@@ -820,7 +950,7 @@ impl Display for Entries {
         let mut value_line = String::from("| ");
         for entry in &self.entries {
             let key_len = entry.key.len();
-            let value_len = format!("{}", entry.value).len();
+            let value_len = format!("{}", entry.value.get_type()).len();
             let line_len = if key_len > value_len {
                 key_len + 1
             } else {
@@ -835,7 +965,7 @@ impl Display for Entries {
                 header_line += "| ";
             }
 
-            value_line += &format!("{}", entry.value);
+            value_line += &format!("{}", entry.value.get_type());
 
             if value_len < line_len {
                 for _ in 0..(line_len - value_len) {
@@ -888,13 +1018,15 @@ impl RowQuery {
     /// ```
     pub fn is<T>(&self, key: T) -> bool
     where
-        T: Into<Types> + PartialEq,
+        T: Into<SafeType> + PartialEq,
     {
         if let Some(entry) = &self.entry {
             let f = Into::into(key);
+            f == entry.value
+            /*
             match &f {
-                Types::String(_) => entry.value.is_string() && entry.value == f,
-                Types::Char(_) => entry.value.is_char() && entry.value == f,
+                Types::String(_) => entry.value.get_type_name() == TypeDefs::String && entry.value == f,
+                Types::Char(_) => entry.value.get_type_name() == TypeDefs::Char && entry.value == f,
                 Types::I8(_) => entry.value.is_i8() && entry.value == f,
                 Types::I64(_) => entry.value.is_i64() && entry.value == f,
                 Types::U64(_) => entry.value.is_u64() && entry.value == f,
@@ -907,6 +1039,7 @@ impl RowQuery {
                         && entry.value == f
                 }
             }
+            */
             //key == entry.value.clone().into()
         } else {
             false
@@ -931,7 +1064,7 @@ impl RowQuery {
     /// ```
     pub fn is_it(&self, key: TypeDefs) -> bool {
         if let Some(entry) = &self.entry {
-            key == entry.value.get_defination()
+            key == entry.value.get_type_name()
         } else {
             false
         }
@@ -958,7 +1091,7 @@ impl RowQuery {
         T: From<Types>,
     {
         if let Some(entry) = &self.entry {
-            Some(Into::into(entry.value.clone()))
+            Some(entry.value.get())
         } else {
             None
         }
@@ -1267,7 +1400,7 @@ impl Table {
                         .iter()
                         .find(|x| x.key == value_entry.key);
                     if let Some(target) = targt {
-                        if target.value == value_entry.value {
+                        if target.value.get_type_name() == value_entry.value.get_type_name() {
                             let header_pos = self
                                 .headers
                                 .iter()
@@ -1278,7 +1411,8 @@ impl Table {
                         } else {
                             errors.push(format!(
                                 "Value type is not equal to header type. Header: {}, Value: {}",
-                                target.value, value_entry.value
+                                target.value.get_type_name(),
+                                value_entry.value.get_type_name()
                             ));
                             break 'entryloop;
                         }
@@ -1319,7 +1453,7 @@ impl Table {
     /// ## Returns
     /// * [`Result<()>`]
     /// * [`Err<Vec<String>>`] for insert errors
-    pub fn insert(&mut self, rows: Vec<Types>) -> Result<(), Vec<String>> {
+    pub fn insert(&mut self, rows: Vec<SafeType>) -> Result<(), Vec<String>> {
         let mut errors = vec![];
         if rows.len() != self.headers.len() {
             errors.push(format!(
@@ -1334,13 +1468,13 @@ impl Table {
         for i in 0..rows.len() {
             let header = &self.headers[i];
 
-            if rows[i].is_empty_array() || header.rtype == rows[i].get_defination() {
+            if header.rtype == rows[i].get_type_name() {
                 _rows.push(rows[i].clone());
             } else {
                 errors.push(format!(
                     "Type mismatch, expected {}, got {} on column {}",
                     header.rtype,
-                    rows[i].get_defination(),
+                    rows[i].get_type_name(),
                     i
                 ));
             }

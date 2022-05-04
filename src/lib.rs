@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::missing_doc_code_examples)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc(html_root_url = "https://docs.rs/safe_en/1.6.7")]
+#![doc(html_root_url = "https://docs.rs/safe_en/1.6.8")]
 //!# SafeEn
 //!Local database solution with clean and strict data integrity.
 //!
@@ -197,17 +197,17 @@ impl Database {
             Ok(it) => it,
             Err(_) => return Err(LoadError),
         };
-        let db_name: String = utils::read_data(&mut file, TypeDefs::String).into();
-        let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+        let db_name: String = utils::read_data(&mut file, TypeDefs::String).get();
+        let table_len: u64 = utils::read_data(&mut file, TypeDefs::U64).get();
         self.set_name(&db_name);
         for _ in 0..table_len {
-            let table_name: String = utils::read_data(&mut file, TypeDefs::String).into();
-            let table_headers_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+            let table_name: String = utils::read_data(&mut file, TypeDefs::String).get();
+            let table_headers_len: u64 = utils::read_data(&mut file, TypeDefs::U64).get();
 
             let mut table_rows: Vec<TableRow> = Vec::new();
 
             for _ in 0..table_headers_len {
-                let table_header: String = utils::read_data(&mut file, TypeDefs::String).into();
+                let table_header: String = utils::read_data(&mut file, TypeDefs::String).get();
                 let base_header_type: i8 = utils::read_one(&mut file);
                 let second_header_type: i8 = utils::read_one(&mut file);
                 let row = TableRow::new(
@@ -226,7 +226,7 @@ impl Database {
                 Err(_) => return Err(LoadError),
             };
 
-            let table_rows_len: u64 = utils::read_data(&mut file, TypeDefs::U64).into();
+            let table_rows_len: u64 = utils::read_data(&mut file, TypeDefs::U64).get();
 
             for _ in 0..table_rows_len {
                 let mut tables = vec![];
@@ -289,7 +289,9 @@ impl Database {
 
             for row in table.columns.iter() {
                 for _data in row.iter() {
-                    let data = match _data.clone() {
+                    let data = utils::type_to_bytes(_data.clone().get_type());
+                    /*
+                    let data = match _data.get_type().clone() {
                         Types::String(e) => utils::type_to_bytes(e),
                         Types::Char(e) => utils::type_to_bytes(e),
                         Types::I8(e) => utils::type_to_bytes(e),
@@ -300,6 +302,7 @@ impl Database {
                         Types::F64(e) => utils::type_to_bytes(e),
                         Types::Array(e) => utils::type_to_bytes(e),
                     };
+                    */
                     utils::extend_bytes_from_raw_type(&mut bytes, &data);
                 }
             }
