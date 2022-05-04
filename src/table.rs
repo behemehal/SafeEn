@@ -803,7 +803,7 @@ impl Entry {
     /// Get the value of the entry
     pub fn get<T>(&self) -> T
     where
-        T: core::convert::From<SafeType> + std::convert::From<Types>,
+        T: std::convert::From<Types>,
     {
         self.value.get()
     }
