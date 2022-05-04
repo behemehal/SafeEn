@@ -891,18 +891,20 @@ impl RowQuery {
         T: Into<Types> + PartialEq,
     {
         if let Some(entry) = &self.entry {
-            match Into::into(key) {
-                Types::String(_) => entry.value.is_string(),
-                Types::Char(_) => entry.value.is_char(),
-                Types::I8(_) => entry.value.is_i8(),
-                Types::I64(_) => entry.value.is_i64(),
-                Types::U64(_) => entry.value.is_u64(),
-                Types::F32(_) => entry.value.is_f32(),
-                Types::F64(_) => entry.value.is_f64(),
-                Types::Bool(_) => entry.value.is_bool(),
+            let f = Into::into(key);
+            match &f {
+                Types::String(_) => entry.value.is_string() && entry.value == f,
+                Types::Char(_) => entry.value.is_char() && entry.value == f,
+                Types::I8(_) => entry.value.is_i8() && entry.value == f,
+                Types::I64(_) => entry.value.is_i64() && entry.value == f,
+                Types::U64(_) => entry.value.is_u64() && entry.value == f,
+                Types::F32(_) => entry.value.is_f32() && entry.value == f,
+                Types::F64(_) => entry.value.is_f64() && entry.value == f,
+                Types::Bool(_) => entry.value.is_bool() && entry.value == f,
                 Types::Array(e) => {
                     entry.value.is_array()
-                        && matches!(entry.value.get_array_type(), Some(x) if x == &e)
+                        && matches!(entry.value.get_array_type(), Some(x) if x == e)
+                        && entry.value == f
                 }
             }
             //key == entry.value.clone().into()
