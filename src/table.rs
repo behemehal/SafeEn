@@ -112,7 +112,7 @@ impl Display for Types {
             Types::Array(e) => format!(
                 "[{}]",
                 e.iter()
-                    .map(|x| format!("{}", x.get_type_name()))
+                    .map(|x| format!("{}", x.get_type_def()))
                     .collect::<String>()
             )
             .fmt(f),
@@ -130,7 +130,13 @@ pub struct SafeType {
 }
 
 impl SafeType {
-    ///REP
+    ///Get the type
+    /// ## Example
+    /// ```
+    /// use safe_type::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
+    /// assert_eq!(safe_type.get(), "Hello".to_string());
+    /// ```
     pub fn get<T>(&self) -> T
     where
         T: core::convert::From<Types>,
@@ -138,17 +144,35 @@ impl SafeType {
         Into::into(self.rtype.clone())
     }
 
-    ///REP
+    ///Get type as [`Types`]
+    /// ## Example
+    /// ```
+    /// use safe_type::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
+    /// assert_eq!(safe_type.get_type(), Types::String("Hello".to_string()));
+    /// ```
     pub fn get_type(&self) -> Types {
         self.rtype.clone()
     }
 
-    ///REP
-    pub fn get_type_name(&self) -> TypeDefs {
+    ///Get type definition
+    /// ## Example
+    /// ```
+    /// use safe_type::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
+    /// assert_eq!(safe_type.get_type_def(), TypeDefs::String);
+    /// ```
+    pub fn get_type_def(&self) -> TypeDefs {
         self.type_id.clone()
     }
 
-    ///REP
+    ///Build a new safe type
+    /// ## Example
+    /// ```
+    /// use safe_type::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
+    /// assert_eq!(safe_type.get(), "Hello".to_string());
+    /// ```
     pub fn build(rtype: Types, type_id: TypeDefs) -> SafeType {
         SafeType { type_id, rtype }
     }
@@ -534,6 +558,19 @@ impl Into<Types> for Vec<f64> {
     }
 }
 
+impl Into<SafeType> for Vec<&str> {
+    fn into(self) -> SafeType {
+        SafeType::build(
+            Types::Array(
+                self.into_iter()
+                    .map(|c| SafeType::build(Types::String(c.to_string()), TypeDefs::String))
+                    .collect::<Vec<SafeType>>(),
+            ),
+            TypeDefs::String,
+        )
+    }
+}
+
 impl Into<SafeType> for Vec<String> {
     fn into(self) -> SafeType {
         SafeType::build(
@@ -803,7 +840,7 @@ impl Entry {
     /// Get the value of the entry
     pub fn get<T>(&self) -> T
     where
-        T: std::convert::From<Types>,
+        T: From<Types>,
     {
         self.value.get()
     }
@@ -920,8 +957,18 @@ impl Display for Entries {
         let mut spacer_line = String::from("| ");
         let mut val_line = String::from("| ");
 
-        let longest_val_len = self.entries.iter().map(|x| format!("{}", x.value.get_type()).len()).max().unwrap();
-        let longest_key_len = self.entries.iter().map(|x| format!("{}", x.key).len()).max().unwrap();
+        let longest_val_len = self
+            .entries
+            .iter()
+            .map(|x| format!("{}", x.value.get_type()).len())
+            .max()
+            .unwrap();
+        let longest_key_len = self
+            .entries
+            .iter()
+            .map(|x| format!("{}", x.key).len())
+            .max()
+            .unwrap();
 
         let entry_len = if longest_val_len > longest_key_len {
             longest_val_len
@@ -931,16 +978,15 @@ impl Display for Entries {
 
         for entry in &self.entries {
             let value = format!("{}", entry.value.get_type());
-            
-            header_line += &entry.key;
-            
-            for i in 0..(entry_len) {
 
+            header_line += &entry.key;
+
+            for i in 0..(entry_len) {
                 if i < entry.key.len() {
                     spacer_line += "-";
                 } else {
                     spacer_line += " ";
-                } 
+                }
 
                 if i < value.len() {
                     val_line += &value.chars().nth(i).unwrap_or(' ').to_string();
@@ -1042,7 +1088,7 @@ impl RowQuery {
     /// ```
     pub fn is_it(&self, key: TypeDefs) -> bool {
         if let Some(entry) = &self.entry {
-            key == entry.value.get_type_name()
+            key == entry.value.get_type_def()
         } else {
             false
         }
@@ -1373,7 +1419,7 @@ impl Table {
                         .iter()
                         .find(|x| x.key == value_entry.key);
                     if let Some(target) = targt {
-                        if target.value.get_type_name() == value_entry.value.get_type_name() {
+                        if target.value.get_type_def() == value_entry.value.get_type_def() {
                             let header_pos = self
                                 .headers
                                 .iter()
@@ -1384,8 +1430,8 @@ impl Table {
                         } else {
                             errors.push(format!(
                                 "Value type is not equal to header type. Header: {}, Value: {}",
-                                target.value.get_type_name(),
-                                value_entry.value.get_type_name()
+                                target.value.get_type_def(),
+                                value_entry.value.get_type_def()
                             ));
                             break 'entryloop;
                         }
@@ -1440,14 +1486,14 @@ impl Table {
 
         for i in 0..rows.len() {
             let header = &self.headers[i];
-
-            if header.rtype == rows[i].get_type_name() {
-                _rows.push(rows[i].clone());
+            let rtype: SafeType = rows[i].clone().into();
+            if header.rtype == rtype.get_type_def() {
+                _rows.push(rtype);
             } else {
                 errors.push(format!(
                     "Type mismatch, expected {}, got {} on column {}",
                     header.rtype,
-                    rows[i].get_type_name(),
+                    rtype.get_type_def(),
                     i
                 ));
             }
