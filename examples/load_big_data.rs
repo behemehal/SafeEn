@@ -8,11 +8,8 @@ fn main() {
         println!("Db named '{}' loaded", db.get_name());
         let table = db.table("users").unwrap();
 
-        println!("{}", table);
-        println!("");
-
         // Get the columns that name field is Ahmet
-        let list_entries = table.get_where(|x| x.row("name").is("Ahmet".to_string()));
+        let list_entries = table.get_where(|x| x.row("name").exists());
 
         //Print the list of entries
         for entry in list_entries {

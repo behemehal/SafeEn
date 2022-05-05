@@ -1,4 +1,5 @@
 use core::{fmt::Display, ops::Index};
+use std::fmt::write;
 
 /// Rust types to be used in the table
 #[derive(Clone, Debug, PartialEq)]
@@ -101,8 +102,8 @@ pub enum Types {
 impl Display for Types {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Types::String(e) => format!("\"{}\"", e).fmt(f),
-            Types::Char(e) => format!("'{}'", e).fmt(f),
+            Types::String(e) => format!("{}", e).fmt(f),
+            Types::Char(e) => format!("{}", e).fmt(f),
             Types::I8(e) => format!("{}", e).fmt(f),
             Types::I64(e) => format!("{}", e).fmt(f),
             Types::U64(e) => format!("{}", e).fmt(f),
@@ -823,17 +824,17 @@ impl Display for Table {
         let max_row_lengths = if self.columns.len() == 0 {
             self.headers
                 .iter()
-                .map(|x| format!(" {} - {}", x.key, x.rtype).len())
+                .map(|x| format!(" {} ", x.key).len())
                 .collect()
         } else {
             let mut rows: Vec<usize> = self
                 .headers
                 .iter()
-                .map(|x| format!(" {} - {}", x.key, x.rtype).len())
+                .map(|x| format!(" {} ", x.key).len())
                 .collect();
             for row in self.columns.iter() {
                 for (index, _) in self.headers.iter().enumerate() {
-                    let row_len = format!("{:?}", row[index]).len() + 2;
+                    let row_len = format!("{:?}", row[index].get_type()).len() + 2;
                     if rows[index] < row_len {
                         rows[index] = row_len;
                     }
@@ -845,20 +846,26 @@ impl Display for Table {
         let mut header_line = String::from("|");
 
         for (index, header) in self.headers.iter().enumerate() {
-            header_line += &format!(" {} - {}", header.key, header.rtype);
+            header_line += &format!(" {} ", header.key);
 
-            for _ in 0..max_row_lengths[index] - format!(" {} - {}", header.key, header.rtype).len()
-            {
+            for _ in 0..max_row_lengths[index] - format!(" {} ", header.key).len() {
                 header_line += " ";
             }
             header_line += " |";
         }
 
-        let mut spliter = String::from("| ");
-        for _ in 0..header_line.len() - 4 {
-            spliter += "-";
+        let mut spliter = String::new();
+        for i in header_line.split("") {
+            spliter += if i == "|" {
+                "|"
+            } else if i == " " {
+                " "
+            } else if i != "" {
+                "-"
+            } else {
+                ""
+            };
         }
-        spliter += " |";
         lines += &format!("{}\n{}", header_line, spliter);
 
         for column in &self.columns {
@@ -911,39 +918,47 @@ pub struct Entries {
 impl Display for Entries {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let mut header_line = String::from("| ");
-        let mut value_line = String::from("| ");
-        for entry in &self.entries {
-            let key_len = entry.key.len();
-            let value_len = format!("{}", entry.value.get_type()).len();
-            let line_len = if key_len > value_len {
-                key_len + 1
-            } else {
-                value_len + 1
-            };
-            header_line += &entry.key;
+        let mut spacer_line = String::from("| ");
+        let mut val_line = String::from("| ");
 
-            if key_len < line_len {
-                for _ in 0..(line_len - key_len) {
+        let longest_val_len = self.entries.iter().map(|x| format!("{}", x.value.get_type()).len()).max().unwrap();
+        let longest_key_len = self.entries.iter().map(|x| format!("{}", x.key).len()).max().unwrap();
+
+        let entry_len = if longest_val_len > longest_key_len {
+            longest_val_len
+        } else {
+            longest_key_len
+        };
+
+        for entry in &self.entries {
+            let value = format!("{}", entry.value.get_type());
+            
+            header_line += &entry.key;
+            
+            for i in 0..(entry_len) {
+
+                if i < entry.key.len() {
+                    spacer_line += "-";
+                } else {
+                    spacer_line += " ";
+                } 
+
+                if i < value.len() {
+                    val_line += &value.chars().nth(i).unwrap_or(' ').to_string();
+                } else {
+                    val_line += " ";
+                }
+
+                if header_line.len() < spacer_line.len() {
                     header_line += " ";
                 }
-                header_line += "| ";
             }
-
-            value_line += &format!("{}", entry.value.get_type());
-
-            if value_len < line_len {
-                for _ in 0..(line_len - value_len) {
-                    value_line += " ";
-                }
-                value_line += "| ";
-            }
+            header_line += " | ";
+            spacer_line += " | ";
+            val_line += " | ";
         }
-        let spacer = "-".repeat(if header_line.len() < 5 {
-            5
-        } else {
-            header_line.len() - 5
-        });
-        write!(f, "{}\n| {} |\n{}", header_line, spacer, value_line)
+
+        write!(f, "{}\n{}\n{}", header_line, spacer_line, val_line)
     }
 }
 
