@@ -40,6 +40,32 @@ impl Display for TypeDefs {
 }
 
 impl TypeDefs {
+    /// Clean way of creating array type
+    /// # Example
+    /// ```
+    /// use safe_en::table::TypeDefs;
+    /// let array_type = TypeDefs::Array(Box::new(TypeDefs::I64));
+    /// let second_array_type = TypeDefs::array_of(TypeDefs::I64);
+    /// assert_eq!(array_type, second_array_type);
+    /// ```
+    pub fn array_of(t: TypeDefs) -> TypeDefs {
+        TypeDefs::Array(Box::new(t))
+    }
+
+    /// Get inner type of array
+    /// # Example
+    /// ```
+    /// use safe_en::table::TypeDefs;
+    /// let array_type = TypeDefs::array_of(TypeDefs::I64);
+    /// assert_eq!(array_type.inner_type(), Some(TypeDefs::I64));
+    /// ```
+    pub fn inner_type(&self) -> Option<TypeDefs> {
+        match self {
+            TypeDefs::Array(t) => Some(*t.clone()),
+            _ => None,
+        }
+    }
+
     /// Builds a type from base and second layer
     pub(crate) fn from_base_and_second_layer(base: u8, second_layer: u8) -> TypeDefs {
         match base {
@@ -101,19 +127,20 @@ pub enum Types {
 impl Display for Types {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Types::String(e) => format!("{}", e).fmt(f),
-            Types::Char(e) => format!("{}", e).fmt(f),
-            Types::I8(e) => format!("{}", e).fmt(f),
-            Types::I64(e) => format!("{}", e).fmt(f),
-            Types::U64(e) => format!("{}", e).fmt(f),
-            Types::Bool(e) => format!("{}", e).fmt(f),
-            Types::F32(e) => format!("{}", e).fmt(f),
-            Types::F64(e) => format!("{}", e).fmt(f),
+            Types::String(e) => format!("\"{}\"", e).fmt(f),
+            Types::Char(e) => format!("'{}'", e).fmt(f),
+            Types::I8(e) => format!("{}_i8", e).fmt(f),
+            Types::I64(e) => format!("{}_i64", e).fmt(f),
+            Types::U64(e) => format!("{}_u64", e).fmt(f),
+            Types::Bool(e) => format!("{}_bool", e).fmt(f),
+            Types::F32(e) => format!("{}_f32", e).fmt(f),
+            Types::F64(e) => format!("{}_f64", e).fmt(f),
             Types::Array(e) => format!(
                 "[{}]",
                 e.iter()
-                    .map(|x| format!("{}", x.get_type_def()))
-                    .collect::<String>()
+                    .map(|x| format!("{}", x.get_type()))
+                    .collect::<Vec<String>>()
+                    .join(",")
             )
             .fmt(f),
         }
@@ -131,11 +158,13 @@ pub struct SafeType {
 
 impl SafeType {
     ///Get the type
+    /// ## Returns
+    /// [`T `]
     /// ## Example
     /// ```
-    /// use safe_type::{SafeType, TypeDefs, Types};
-    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
-    /// assert_eq!(safe_type.get(), "Hello".to_string());
+    /// use safe_en::table::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::build("Hello".into(), TypeDefs::String);
+    /// assert_eq!(safe_type.get::<String>(), "Hello".to_string());
     /// ```
     pub fn get<T>(&self) -> T
     where
@@ -147,8 +176,8 @@ impl SafeType {
     ///Get type as [`Types`]
     /// ## Example
     /// ```
-    /// use safe_type::{SafeType, TypeDefs, Types};
-    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
+    /// use safe_en::table::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::build("Hello".into(), TypeDefs::String);
     /// assert_eq!(safe_type.get_type(), Types::String("Hello".to_string()));
     /// ```
     pub fn get_type(&self) -> Types {
@@ -158,8 +187,8 @@ impl SafeType {
     ///Get type definition
     /// ## Example
     /// ```
-    /// use safe_type::{SafeType, TypeDefs, Types};
-    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
+    /// use safe_en::table::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::build("Hello".into(), TypeDefs::String);
     /// assert_eq!(safe_type.get_type_def(), TypeDefs::String);
     /// ```
     pub fn get_type_def(&self) -> TypeDefs {
@@ -167,11 +196,13 @@ impl SafeType {
     }
 
     ///Build a new safe type
+    /// ## Returns
+    /// [`SafeType`] builded
     /// ## Example
     /// ```
-    /// use safe_type::{SafeType, TypeDefs, Types};
-    /// let mut safe_type = SafeType::new("Hello".into(), TypeDefs::String);
-    /// assert_eq!(safe_type.get(), "Hello".to_string());
+    /// use safe_en::table::{SafeType, TypeDefs, Types};
+    /// let mut safe_type = SafeType::build("Hello".into(), TypeDefs::String);
+    /// assert_eq!(safe_type.get::<String>(), "Hello".to_string());
     /// ```
     pub fn build(rtype: Types, type_id: TypeDefs) -> SafeType {
         SafeType { type_id, rtype }
@@ -1018,10 +1049,42 @@ impl Index<usize> for Entries {
 pub struct RowQuery {
     entry: Option<Entry>,
 }
+
 impl RowQuery {
     /// Check row query exists
     pub fn exists(&self) -> bool {
         self.entry.is_some()
+    }
+
+    /// If type is array get its length
+    ///
+    /// ## Returns
+    /// This function returns -1 if the type is not an array
+    ///
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
+    /// let mut db = Database::new();
+    /// db.create_table("school", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("students", TypeDefs::array_of(TypeDefs::String)),
+    /// ]);
+    /// db.table_unwrap("school").insert(vec![
+    ///     "IstinyeAnadolu".into(),
+    ///     vec!["Ahmet", "Hasan", "Huseyin"].into(),
+    /// ]);
+    /// let first_column = &db.table_unwrap("school").get_where(|x| x.row("students").size() > 2 )[0];
+    ///  assert_eq!(first_column.row("students").size(), 3);
+    /// ```
+    pub fn size(&self) -> isize {
+        if let Some(entry) = &self.entry {
+            match entry.value.get_type() {
+                Types::Array(e) => e.len() as isize,
+                _ => -1,
+            }
+        } else {
+            -1
+        }
     }
 
     /// Check if entry is the equvalent of the given value
@@ -1227,6 +1290,8 @@ impl TableRow {
 
 impl Table {
     /// Get table name
+    /// ## Returns
+    /// [`&str`] Table name
     /// ## Example
     /// ```
     /// use safe_en::{Database, table::{TableRow, TypeDefs, Types}};
@@ -1243,7 +1308,7 @@ impl Table {
 
     ///Get Headers
     /// ## Returns
-    /// * [`Vec<TableRow>`]
+    /// * [`Vec<TableRow>`] Vector of table rows
     /// ## Example
     /// ```
     /// use safe_en::{Database, table::{TableRow, TypeDefs}};
@@ -1324,10 +1389,53 @@ impl Table {
         Some(Entries { entries })
     }
 
+    /// Remove a row by filter
+    /// ## Arguments
+    /// * `filter` - Filter function [`Fn(`Entry`) -> bool`]
+    /// ## Returns
+    /// [`usize`] Effected row length
+    /// ## Example
+    /// ```
+    /// use safe_en::Database;
+    /// use safe_en::table::{TableRow, TypeDefs};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().remove_where(|entry| entry.row("name").is("Ahmet".to_string()));
+    /// ```
+    pub fn remove_where<E: Fn(Entries) -> bool + Clone + Sized>(&mut self, filter: E) -> usize {
+        let mut found_entries = Vec::new();
+        for (index, entries) in self.columns.iter().enumerate() {
+            let fake_entries = Entries {
+                entries: entries
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, value)| Entry {
+                        key: self.headers[ix].key.clone(),
+                        value: value.clone(),
+                    })
+                    .collect(),
+            };
+
+            if filter(fake_entries.clone()) {
+                found_entries.push(index);
+            }
+        }
+
+        for i in &found_entries {
+            self.columns.remove(*i);
+        }
+        found_entries.len()
+    }
+
     /// Get the value of a column by filter
     /// ## Arguments
     /// * `filter` - Filter function [`Fn(`Entry`) -> bool`]
     /// * `value` - Value to set
+    /// ## Returns
+    /// [`Vec<Entries>`]
     /// ## Example
     /// ```
     /// use safe_en::Database;
@@ -1360,10 +1468,216 @@ impl Table {
         found_entries
     }
 
+    /// Increase the value of a number by filter
+    /// ## Arguments
+    /// * `filter` - Filter function [`Fn(`Entry`) -> bool`]
+    /// ## Returns
+    /// * [`Ok<()>`]
+    /// * [`Err<Vec<String>>`] - Error messages
+    /// ## Example
+    /// ```rust
+    /// use safe_en::Database;
+    /// use safe_en::table::{TableRow, TypeDefs};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().inc_where(|x| {
+    ///     x.row("age").exists()
+    /// }, "age");
+    /// //Increases all ages by 1
+    /// ```
+    pub fn inc_where<E: Fn(Entries) -> bool + Clone + Sized>(
+        &mut self,
+        filter: E,
+        row: &str,
+    ) -> Result<(), Vec<String>> {
+        let mut errors = vec![];
+        for entries in &mut self.columns {
+            let fake_entries = Entries {
+                entries: entries
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, value)| Entry {
+                        key: self.headers[ix].key.clone(),
+                        value: value.clone(),
+                    })
+                    .collect(),
+            };
+
+            if filter(fake_entries.clone()) {
+                let header_pos = self.headers.iter().position(|x| x.key == row).unwrap();
+                match match entries[header_pos].clone().rtype {
+                    Types::I8(e) => {
+                        if e == std::i8::MAX {
+                            errors.push(format!("'I8' about to be overflow"));
+                            None
+                        } else {
+                            Some(Types::I8(e + 1))
+                        }
+                    }
+                    Types::I64(e) => {
+                        if e == i64::max_value() {
+                            errors.push(format!("'I64' about to be overflow"));
+                            None
+                        } else {
+                            Some(Types::I64(e + 1))
+                        }
+                    }
+                    Types::U64(e) => {
+                        if e == u64::max_value() {
+                            errors.push(format!("'U64' about to be overflow"));
+                            None
+                        } else {
+                            Some(Types::U64(e + 1))
+                        }
+                    }
+                    Types::F32(e) => {
+                        if e == f32::MAX {
+                            errors.push(format!("'F32' about to be overflow"));
+                            None
+                        } else {
+                            Some(Types::F32(e + 1.))
+                        }
+                    }
+                    Types::F64(e) => {
+                        if e == f64::MAX {
+                            errors.push(format!("'F64' about to be overflow"));
+                            None
+                        } else {
+                            Some(Types::F64(e + 1.))
+                        }
+                    }
+                    _ => {
+                        errors.push(format!("{} is not a integer type column", row));
+                        None
+                    }
+                } {
+                    Some(e) => {
+                        entries[header_pos].rtype = e;
+                    }
+                    None => {}
+                }
+            }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Increase the value of a number by filter
+    /// ## Arguments
+    /// * `filter` - Filter function [`Fn(`Entry`) -> bool`]
+    /// ## Returns
+    /// * [`Ok<()>`]
+    /// * [`Err<Vec<String>>`] - Error messages
+    /// ## Example
+    /// ```rust
+    /// use safe_en::Database;
+    /// use safe_en::table::{TableRow, TypeDefs};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///    TableRow::new("name", TypeDefs::String),
+    ///    TableRow::new("age", TypeDefs::I64),
+    /// ]);
+    /// db.table("users").unwrap().inc_where(|x| {
+    ///     x.row("age").exists()
+    /// }, "age");
+    /// //Increases all ages by 1
+    /// ```
+    pub fn push_where<E: Fn(Entries) -> bool + Clone + Sized>(
+        &mut self,
+        filter: E,
+        row: &str,
+        value: SafeType,
+    ) -> Result<(), Vec<String>> {
+        let mut errors = vec![];
+        for entries in &mut self.columns {
+            let fake_entries = Entries {
+                entries: entries
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, value)| Entry {
+                        key: self.headers[ix].key.clone(),
+                        value: value.clone(),
+                    })
+                    .collect(),
+            };
+
+            if filter(fake_entries.clone()) {
+                let header_pos = self.headers.iter().position(|x| x.key == row).unwrap();
+                match match entries[header_pos].clone().rtype {
+                    Types::Array(e) => {
+                        let type_inner_type = entries[header_pos]
+                            .clone()
+                            .get_type_def()
+                            .inner_type()
+                            .unwrap();
+
+                        if value.get_type().is_array() {
+                            let value_inner_type = value.get_type_def().inner_type().unwrap();
+
+                            if type_inner_type == value_inner_type {
+                                let mut arr_copy = e.clone();
+                                let contents = match value.get_type() {
+                                    Types::Array(c) => c,
+                                    _ => unreachable!(),
+                                };
+                                arr_copy.extend(contents);
+                                Some(Types::Array(arr_copy))
+                            } else {
+                                errors.push(format!(
+                                    "Inner type of array is '{}' but given value is '{}'",
+                                    type_inner_type,
+                                    value.get_type()
+                                ));
+                                None
+                            }
+                        } else {
+                            let mut arr_copy = e.clone();
+
+                            if type_inner_type == value.get_type_def() {
+                                arr_copy.push(value.clone());
+                                Some(Types::Array(arr_copy))
+                            } else {
+                                errors.push(format!(
+                                    "Inner type of array is '{}' but given value is '{}'",
+                                    type_inner_type,
+                                    value.get_type()
+                                ));
+                                None
+                            }
+                        }
+                    }
+                    _ => {
+                        errors.push("Field is not a array type".to_string());
+                        None
+                    }
+                } {
+                    Some(e) => {
+                        entries[header_pos].rtype = e;
+                    }
+                    None => (),
+                }
+            }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
     /// Set the value of a column by filter
     /// ## Arguments
     /// * `filter` - Filter function [`Fn(`Entry`) -> bool`]
     /// * `value` - Value to set
+    /// ## Returns
+    /// * [`Ok<usize>`] - Effected row length
+    /// * [`Err<Vec<String>>`] - Error messages
     /// ## Example
     /// ```rust
     /// use safe_en::Database;
@@ -1382,9 +1696,6 @@ impl Table {
     ///     },
     /// ]);
     /// ```
-    /// ## Returns
-    /// * [`Ok<Vec<usize>>`] - Changed row indexes
-    /// * [`Err<Vec<String>>`] - Error messages
     pub fn set_where<E: Fn(Entries) -> bool + Clone + Sized, T>(
         &mut self,
         filter: E,
@@ -1452,6 +1763,9 @@ impl Table {
     /// Insert data to table
     /// ## Arguments
     /// * `rows` - [`TableRow`]
+    /// ## Returns
+    /// * [`Result<()>`]
+    /// * [`Err<Vec<String>>`] for insert errors
     /// ## Example
     /// ```
     /// use safe_en::{table::{TableRow, TypeDefs, Types},Database};
@@ -1469,9 +1783,6 @@ impl Table {
     ///      18_i64.into(),
     ///     ]).unwrap();
     /// ```
-    /// ## Returns
-    /// * [`Result<()>`]
-    /// * [`Err<Vec<String>>`] for insert errors
     pub fn insert(&mut self, rows: Vec<SafeType>) -> Result<(), Vec<String>> {
         let mut errors = vec![];
         if rows.len() != self.headers.len() {
@@ -1490,10 +1801,6 @@ impl Table {
             if header.rtype == rtype.get_type_def() {
                 _rows.push(rtype);
             } else {
-                println!("{:?}", header);
-                println!("{:?}", rtype);
-                println!("{:?}", rtype.get_type_def());
-
                 errors.push(format!(
                     "Type mismatch, expected {}, got {} on column {}",
                     header.rtype,

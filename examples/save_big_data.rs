@@ -16,6 +16,7 @@ fn main() {
             TableRow::new("name", TypeDefs::String),
             TableRow::new("age", TypeDefs::I64),
             TableRow::new("city", TypeDefs::String),
+            TableRow::new("rand_array", TypeDefs::array_of(TypeDefs::String)),
         ],
     )
     .unwrap();
@@ -35,9 +36,31 @@ fn main() {
 
         db.table("users")
             .unwrap()
-            .insert(vec![name.into(), age.into(), city.into()])
+            .insert(vec![name.into(), age.into(), city.into(), vec!["1"].into()])
             .unwrap();
     }
+
+    let user = db.table("users").unwrap().get_at(0).unwrap();
+
+    println!("{}", user);
+
+    db.table("users")
+        .unwrap()
+        .push_where(
+            |entry| entry.row("name").is("Ahmet"),
+            "rand_array",
+            "2".into(),
+        )
+        .unwrap();
+
+    db.table("users")
+        .unwrap()
+        .inc_where(|entry| entry.row("name").is("Ahmet"), "age")
+        .unwrap();
+
+    let user = db.table("users").unwrap().get_at(0).unwrap();
+
+    println!("{}", user);
 
     println!("Db saved");
 

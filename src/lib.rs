@@ -138,6 +138,8 @@ impl Database {
     /// Get query
     /// ## Parameters
     /// * `table` - The name of the table
+    /// ## Returns
+    /// * [`Option<&mut Table>`]
     /// ## Example
     /// ```
     /// use safe_en::{Database, table::{TableRow, TypeDefs}};
@@ -152,10 +154,68 @@ impl Database {
         self.tables.iter_mut().find(|x| x.name == table_name)
     }
 
+    /// Get query returns table directly
+    /// ## Parameters
+    /// * `table` - The name of the table
+    /// ## Returns
+    /// * [`&mut Table`]
+    /// ## Panics
+    /// If table not found
+    /// ## Example
+    /// ```
+    /// use safe_en::{Database, table::{TableRow, TypeDefs}};
+    /// let mut db = Database::new();
+    /// db.create_table("users", vec![
+    ///   TableRow::new("id", TypeDefs::I64),
+    ///  TableRow::new("email", TypeDefs::String),
+    /// ]).unwrap();
+    /// assert_eq!(db.table_unwrap("users").get_name(), "users");
+    /// ```
+    pub fn table_unwrap(&mut self, table_name: &str) -> &mut Table {
+        self.tables
+            .iter_mut()
+            .find(|x| x.name == table_name)
+            .unwrap()
+    }
+
+    /// Removes table
+    /// ## Parameters
+    /// * `name` - Table name
+    /// ## Returns
+    /// * [`Ok(())`]
+    /// * [`Err(())`] If a table with same name already exists
+    /// ## Example
+    /// ```
+    /// use safe_en::{
+    ///    table::{TableRow, TypeDefs},
+    ///   Database,
+    /// };
+    /// let mut db = Database::new();
+    /// 
+    /// db.create_table("users", vec![
+    ///   TableRow::new("id", TypeDefs::I64),
+    ///   TableRow::new("email", TypeDefs::String),
+    /// ]).unwrap();
+    /// 
+    /// db.remove_table("users").unwrap();
+    /// ```
+    pub fn remove_table(&mut self, table_name: &str) -> Result<(), ()> {
+        match self.tables.iter().position(|x| x.get_name() == table_name) {
+            Some(e) => {
+                self.tables.remove(e);
+                Ok(())
+            }
+            None => Err(()),
+        }
+    }
+
     /// Creates table
     /// ## Parameters
     /// * `name` - Table name
     /// * `rows` - Table rows
+    /// ## Returns
+    /// * [`Ok(())`]
+    /// * [`Err(())`] If a table with same name already exists
     /// ## Example
     /// ```
     /// use safe_en::{
@@ -290,19 +350,6 @@ impl Database {
             for row in table.columns.iter() {
                 for _data in row.iter() {
                     let data = utils::type_to_bytes(_data.clone().get_type());
-                    /*
-                    let data = match _data.get_type().clone() {
-                        Types::String(e) => utils::type_to_bytes(e),
-                        Types::Char(e) => utils::type_to_bytes(e),
-                        Types::I8(e) => utils::type_to_bytes(e),
-                        Types::I64(e) => utils::type_to_bytes(e),
-                        Types::U64(e) => utils::type_to_bytes(e),
-                        Types::Bool(e) => utils::type_to_bytes(e),
-                        Types::F32(e) => utils::type_to_bytes(e),
-                        Types::F64(e) => utils::type_to_bytes(e),
-                        Types::Array(e) => utils::type_to_bytes(e),
-                    };
-                    */
                     utils::extend_bytes_from_raw_type(&mut bytes, &data);
                 }
             }

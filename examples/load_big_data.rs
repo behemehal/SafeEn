@@ -17,6 +17,8 @@ fn main() {
             println!("")
         }
 
+        table.get_where(|entry| entry.row("random_array").size() == 1);
+
         // Update the name field if the name field is Ahmet
         table
             .set_where(
@@ -36,6 +38,8 @@ fn main() {
         }
 
         println!("{}", table);
+
+        db.remove_table("users").unwrap();
     } else {
         panic!("Db file not found! run save_big_data.rs to create it.");
     }
