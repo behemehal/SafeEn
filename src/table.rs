@@ -1,5 +1,4 @@
 use core::{fmt::Display, ops::Index};
-use std::fmt::write;
 
 /// Rust types to be used in the table
 #[derive(Clone, Debug, PartialEq)]
