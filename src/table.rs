@@ -566,7 +566,7 @@ impl Into<SafeType> for Vec<&str> {
                     .map(|c| SafeType::build(Types::String(c.to_string()), TypeDefs::String))
                     .collect::<Vec<SafeType>>(),
             ),
-            TypeDefs::String,
+            TypeDefs::Array(Box::new(TypeDefs::String)),
         )
     }
 }
@@ -579,7 +579,7 @@ impl Into<SafeType> for Vec<String> {
                     .map(|c| SafeType::build(Types::String(c), TypeDefs::String))
                     .collect::<Vec<SafeType>>(),
             ),
-            TypeDefs::String,
+            TypeDefs::Array(Box::new(TypeDefs::String)),
         )
     }
 }
@@ -592,7 +592,7 @@ impl Into<SafeType> for Vec<char> {
                     .map(|c| SafeType::build(Types::Char(c), TypeDefs::Char))
                     .collect::<Vec<SafeType>>(),
             ),
-            TypeDefs::Char,
+            TypeDefs::Array(Box::new(TypeDefs::Char)),
         )
     }
 }
@@ -605,7 +605,7 @@ impl Into<SafeType> for Vec<i8> {
                     .map(|c| SafeType::build(Types::I8(c), TypeDefs::I8))
                     .collect::<Vec<SafeType>>(),
             ),
-            TypeDefs::I8,
+            TypeDefs::Array(Box::new(TypeDefs::I8)),
         )
     }
 }
@@ -644,7 +644,7 @@ impl Into<SafeType> for Vec<bool> {
                     .map(|c| SafeType::build(Types::Bool(c), TypeDefs::Bool))
                     .collect::<Vec<SafeType>>(),
             ),
-            TypeDefs::Bool,
+            TypeDefs::Array(Box::new(TypeDefs::Bool)),
         )
     }
 }
@@ -1490,6 +1490,10 @@ impl Table {
             if header.rtype == rtype.get_type_def() {
                 _rows.push(rtype);
             } else {
+                println!("{:?}", header);
+                println!("{:?}", rtype);
+                println!("{:?}", rtype.get_type_def());
+
                 errors.push(format!(
                     "Type mismatch, expected {}, got {} on column {}",
                     header.rtype,
