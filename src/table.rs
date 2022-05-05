@@ -870,7 +870,7 @@ impl Display for Table {
                 .collect();
             for row in self.columns.iter() {
                 for (index, _) in self.headers.iter().enumerate() {
-                    let row_len = format!("{:?}", row[index].get_type()).len() + 2;
+                    let row_len = format!("{}", row[index].get_type()).len() + 2;
                     if rows[index] < row_len {
                         rows[index] = row_len;
                     }
